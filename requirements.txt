@@ -1,0 +1,54 @@
+# Core Backend Dependencies
+fastapi
+uvicorn[standard]
+pydantic
+python-multipart
+
+# AI/ML Dependencies
+google-generativeai
+transformers
+torch
+sentence-transformers
+numpy
+pandas
+scikit-learn
+
+# Database Dependencies
+sqlalchemy
+psycopg2-binary
+alembic
+
+# API and HTTP
+requests
+aiohttp
+httpx
+
+# Environment and Configuration
+python-dotenv
+pydantic-settings
+
+# Logging and Monitoring
+structlog
+rich
+
+# Data Processing
+nltk
+spacy
+textblob
+
+# Development Dependencies
+pytest
+pytest-asyncio
+black
+flake8
+mypy
+
+# Security
+cryptography
+passlib[bcrypt]
+python-jose[cryptography]
+
+# Utilities
+python-dateutil
+tqdm
+click 
