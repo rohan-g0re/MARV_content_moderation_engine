@@ -277,9 +277,7 @@ notebooks/scratch/
 scripts/temp/
 
 # Documentation tracking files
-.docs/progress.md
-.docs/errors.md
-.docs/project_plan.md
+docs/
 
 # Helper scripts
 create_env.py 

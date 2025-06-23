@@ -71,7 +71,7 @@ def setup_logging(log_file: str) -> logging.Logger:
 class PromptTemplates:
     SYSTEM_PROMPT = """
     You are a content generation system for training a content moderation AI. 
-    Generate realistic social media posts that span the full spectrum of content appropriateness.
+    Generate finance realted realistic social media posts that span the full spectrum of content appropriateness.
     
     CLASSIFICATION BANDS (use exactly these labels):
     - SAFE: Completely appropriate content (news, hobbies, education, positive interactions)
@@ -82,8 +82,8 @@ class PromptTemplates:
     
     REQUIREMENTS:
     1. Generate exactly the requested number of posts
-    2. Ensure realistic variety in length (10-500 characters)
-    3. Include diverse topics: politics, sports, gaming, social issues, technology, entertainment
+    2. Ensure realistic variety in length (50-500 characters)
+    3. Include diverse topics: politics, technology, finance, economics, business, investment, stock market, crypto, blockchain, etc.
     4. Make content realistic to actual social media posts
     5. Ensure balanced distribution across all 5 categories
     6. Return ONLY valid JSON format
@@ -222,7 +222,12 @@ class GeminiDataGenerator:
                 self.logger.info(f"Progress: {len(self.generated_posts)}/{self.config.target_samples} posts generated")
             else:
                 self.logger.error(f"Failed to generate batch {batch_number}")
-                return False
+                # If we have some data already, don't fail completely - might be quota limit
+                if len(self.generated_posts) > 0:
+                    self.logger.warning(f"Stopping generation early due to failure, but saving {len(self.generated_posts)} posts")
+                    return False  # Partial success
+                else:
+                    return False  # Complete failure
             
             # Rate limiting
             if remaining_posts > 0:
@@ -286,15 +291,21 @@ def main():
     
     success = generator.generate_dataset()
     
-    if success:
-        success = generator.save_dataset()
-        
-    if success:
-        logger.info("✅ Gemini dataset generation completed successfully!")
-        logger.info(f"📁 Output file: {config.output_file}")
-        logger.info(f"📊 Total samples: {len(generator.generated_posts)}")
+    # Save whatever data we have, even if generation was incomplete due to quota limits
+    if len(generator.generated_posts) > 0:
+        save_success = generator.save_dataset()
+        if save_success:
+            if success:
+                logger.info("✅ Gemini dataset generation completed successfully!")
+            else:
+                logger.info("⚠️ Gemini dataset generation incomplete (likely quota limit) but partial data saved!")
+            logger.info(f"📁 Output file: {config.output_file}")
+            logger.info(f"📊 Total samples: {len(generator.generated_posts)}")
+        else:
+            logger.error("❌ Failed to save dataset!")
+            sys.exit(1)
     else:
-        logger.error("❌ Dataset generation failed!")
+        logger.error("❌ No data generated!")
         sys.exit(1)
 
 if __name__ == "__main__":
