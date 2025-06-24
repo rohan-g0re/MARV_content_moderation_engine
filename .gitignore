@@ -236,18 +236,18 @@ logs
 ehthumbs.db
 Thumbs.db
 
-# Data files
-data/raw/
-data/processed/
-data/external/
+# Data files - ignore contents but keep folder structure
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+data/external/*
+!data/external/.gitkeep
 *.csv
 *.json
 *.parquet
 models/saved/
 checkpoints/
-
-# Raw datasets - don't push to GitHub
-raw/
 
 # API Keys and secrets
 config/secrets.py
@@ -276,8 +276,9 @@ experiments/
 notebooks/scratch/
 scripts/temp/
 
-# Documentation tracking files
-docs/
+# Documentation files - ignore contents but keep folder structure
+docs/*
+!docs/.gitkeep
 
 # Helper scripts
 create_env.py 
