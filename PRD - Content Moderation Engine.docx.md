@@ -69,7 +69,7 @@ All logic will flow through a unified moderation controller (GuardianAI) to ensu
 
 **Day 2–3: Rule-Based Filtering (GuardianAI v1)**
 
-* Implement database-backed profanity and severity lookup (SQLite) → SUGGEST ME BETTER STORAGE TYPES
+* Implement database-backed profanity and severity lookup (PostgreSQL) → APIs using FastAPI
 
 * Deliverable: DatabaseFilter with regex, keywords, scoring
 
