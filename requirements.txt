@@ -12,6 +12,7 @@ sentence-transformers
 numpy
 pandas
 scikit-learn
+detoxify
 
 # Database Dependencies
 sqlalchemy
