@@ -51,4 +51,7 @@ python-jose[cryptography]
 # Utilities
 python-dateutil
 tqdm
-click 
+click
+
+# Additional dependencies for content moderation system
+# (Most imports are built-in Python libraries or already included above) 

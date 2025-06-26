@@ -277,7 +277,7 @@ notebooks/scratch/
 scripts/temp/
 
 # Documentation files - ignore contents but keep folder structure
-docs/*
+# docs/*
 !docs/.gitkeep
 
 # Helper scripts
