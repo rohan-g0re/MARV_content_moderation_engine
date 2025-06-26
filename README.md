@@ -1,145 +1,173 @@
-# Content Moderation Engine
+# 🧩 Content Moderation System
 
-**Project Brief: Content Moderation Engine**
+A simple, clean content moderation system with three-layer filtering: rule-based, Detoxify toxicity detection, and FinBERT fraud detection.
 
-**Client:** UnBound X  
-**Team:** Intern Development Cohort  
-**Delivery Format:** Daily commits + final walkthrough + documentation
+## ✨ Features
 
-**Objective**
+- **Three-Layer Moderation Pipeline**:
+  1. **Rule-based filtering** (keywords from `words.json` + regex patterns)
+  2. **Detoxify** toxicity detection
+  3. **FinBERT** financial fraud detection
 
-Design and build a cost-efficient, scalable content moderation system using multiple filtering layers. The system should triage user-generated posts based on severity using a mix of deterministic filtering, machine learning, and lightweight Agentic layer
+- **Clean UI**: Simple HTML frontend with real-time results
+- **Database Storage**: SQLite with all moderation history
+- **RESTful API**: FastAPI backend with automatic documentation
 
-**Architecture Overview**
+## 🚀 Quick Start
 
-The pipeline will consist of:
+### 1. Install Dependencies
 
-1. **Feed Generator** (synthetic posts)
-2. **Database-Driven Rule Filter** (fast keyword lookup)
-3. **AI Layer 1** (e.g. Llama 3.1 via Ollama for nuance)
-4. **Agentic Layer (not sure about its working - help me understand what options do I have here )**
-5. **Feedback & Override System** (user/admin moderation)
+```powershell
+pip install -r requirements.txt
+```
 
-All logic will flow through a unified moderation controller (GuardianAI) to ensure explainability and tunable thresholds.
+### 2. Run the Backend
 
-**Technical Stack**
+```powershell
+cd backend
+python main.py
+```
 
-| Layer | Tools / Frameworks |
-| :---- | :---- |
-| Language | Python 3.11+ |
-| Backend | FastAPI |
-| ML / AI | HuggingFace Transformers |
-| Database | **IF NEEDED** - SQLite for dev, PostgreSQL for production-ready handoff |
-| Frontend (Optional) | React (basic UI for submission/viewer) |
-| LLM Integration | Ollama w/ Llama 3.1 (local) or lightweight hosted LLM  |
-| Agentic Integration  | Not decided yet |
+The API will be available at: http://localhost:8000
 
-**Timeline (13-Day Sprint)**
+### 3. Open the Frontend
 
-**Day 1: Feed Generation**
+Open `frontend/index.html` in your browser, or serve it with:
 
-* Write a content generator script using random mixing of good/malicious phrases
-* 2 scripts to be written for content generation:
-  * First: A gemini based script that has a very string funneled system prompt that will help generate a good mixture of pure to malicious to complete explicit and illegal posts
-  * Second: As gemini apis will hit a limit we need to have a python script that can run for hours to generate posts with similar balance 
-* Deliverable: 2 different datasets (by 2 different generator scripts) of atleast 10,000 samples in total
+```powershell
+# Using Python
+python -m http.server 8080
 
-**Day 2–3: Rule-Based Filtering (GuardianAI v1)**
+# Then visit: http://localhost:8080/frontend/index.html
+```
 
-* Implement database-backed profanity and severity lookup (SQLite) → SUGGEST ME BETTER STORAGE TYPES
-* Deliverable: DatabaseFilter with regex, keywords, scoring
+### 4. Test the System
 
-**Day 4: Basic Post Viewer UI**
+```powershell
+python test_moderation.py
+```
 
-* Create or mock a web form for post submission
-* Render moderation action (Accept, Flag, Block)
-* Deliverable: Lightweight UI + API integration
+## 📋 API Endpoints
 
-**Day 5: GuardianAI Core Pipeline**
+### POST /moderate
+Moderate content through the three-layer pipeline.
 
-* Combine DatabaseFilter + moderation router
-* Return structured output (threat level, action, explanation)
-* Deliverable: moderate_content() entrypoint with result class
+**Request:**
+```json
+{
+  "content": "Your text content here"
+}
+```
 
-**Day 6: LLM Escalation Logic**
+**Response:**
+```json
+{
+  "accepted": false,
+  "reason": "Rule-based: scammer",
+  "id": 1
+}
+```
 
-* Connect to Llama via API (borderline cases only)
-* Add thresholds: block if LLM threat ≥ 3, else use feedback
-* Deliverable: Hybrid decision logic tested across samples
+### GET /posts
+Get all moderated posts with their results.
 
-**Day 7–8: AI Integration Testing**
+### GET /health
+Health check endpoint.
 
-* Run benchmark test posts (clean, spam, fraud, profane, nuanced)
-* Measure average latency + escalation frequency
-* Deliverable: Report logs with confidence heatmap
+## 🧪 Testing
 
-**Day 9: Phrase Suggestions (Optional)**
+### Manual Testing with PowerShell
 
-* LLM should suggest safer alternatives when posts are blocked
-* Deliverable: Explanation + suggestion visible in UI response
+```powershell
+# Test moderation
+Invoke-RestMethod -Uri "http://localhost:8000/moderate" -Method POST -ContentType "application/json" -Body '{"content": "You are a scammer and I hate this!"}'
 
-**Day 10: Dictionary Expansion with Word Embeddings**
+# Get all posts
+Invoke-RestMethod -Uri "http://localhost:8000/posts" -Method GET
+```
 
-* Use FastText/Word2Vec to discover synonyms
-* Build candidate list for moderator review
-* Deliverable: Updated dictionary + tool for vetting terms
+### Alternative using curl (if available)
 
-**Day 11: Feedback & Override System**
+```powershell
+# Test moderation
+curl -X POST http://localhost:8000/moderate -H "Content-Type: application/json" -d '{"content": "You are a scammer and I hate this!"}'
 
-* Capture user/admin feedback on flagged posts
-* Add manual override route in admin view
-* Deliverable: Logs with correction indicators
+# Get all posts
+curl http://localhost:8000/posts
+```
 
-**Day 12: QA Pass + Logging**
+### Test Cases
 
-* Run full regression test on all flows
-* Deliverable: logs, error handling, LLM fallback recovery
+The system includes test cases for:
+- Normal content (should be accepted)
+- Rule-based violations (profanity from `words.json`)
+- Toxic content (high toxicity scores)
+- Financial fraud indicators
+- URL/email patterns
 
-**Day 13: Documentation + Demo**
+## 📁 Project Structure
 
-* Technical README, system diagrams, routes, thresholds
-* Live walkthrough by dev team
-* Deliverable: GitHub repo with clean commit history + presentation
+```
+├── backend/
+│   └── main.py              # FastAPI backend
+├── frontend/
+│   └── index.html           # Simple HTML UI
+├── words.json               # Profanity keywords (2700+ words)
+├── requirements.txt         # Python dependencies
+├── test_moderation.py       # Test script
+└── README.md               # This file
+```
 
-**Success Criteria**
+## ⚙️ Configuration
 
-* Content is flagged accurately by rules, ML, and AI layers
-* LLM is used for ~10–15% of posts (cost-aware usage)
-* System returns action + human-readable explanation per post
-* Interns demonstrate understanding of layered moderation strategy
+### Keywords File
+The system uses `words.json` which contains 2700+ profanity and inappropriate words. You can:
+- Add new words to the JSON array
+- Remove words you don't want to filter
+- Replace with your own custom list
 
-## Setup Instructions
+### Model Thresholds
+Modify thresholds in `backend/main.py`:
+- Detoxify toxicity threshold: `toxicity_score > 0.5`
+- FinBERT fraud threshold: `confidence > 0.7`
 
-1. **Create Virtual Environment:**
-   ```bash
-   python -m venv content_moderation_env
-   content_moderation_env\Scripts\activate  # Windows
-   # source content_moderation_env/bin/activate  # Linux/Mac
-   ```
+## 🔧 Troubleshooting
 
-2. **Install Dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+### Common Issues
 
-3. **Environment Variables:**
-   - Copy `.env.example` to `.env`
-   - Add your Gemini API key and other required credentials
+1. **Models not loading**: The system will fall back to rule-based filtering
+2. **Database errors**: SQLite file will be created automatically
+3. **CORS issues**: Backend includes CORS middleware for all origins
 
-4. **Run Data Generation:**
-   ```bash
-   python scripts/generate_data_gemini.py
-   python scripts/generate_data_synthetic.py
-   ```
+### Manual Database Inspection
 
-5. **Start Development Server:**
-   ```bash
-   uvicorn backend.app.main:app --reload
-   ```
+```powershell
+# Using SQLite CLI (if installed)
+sqlite3 moderation.db
+.tables
+SELECT * FROM posts ORDER BY created_at DESC;
+```
 
-6. **Frontend Development:**
-   ```bash
-   cd frontend
-   npm install
-   npm start
-   ``` 
+## 📊 Database Schema
+
+```sql
+CREATE TABLE posts (
+    id INTEGER PRIMARY KEY,
+    content TEXT NOT NULL,
+    accepted BOOLEAN NOT NULL,
+    reason TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+## 🎯 Moderation Logic
+
+1. **Rule-based Filter**: Checks 2700+ keywords from `words.json` and regex patterns
+2. **Detoxify**: Uses HuggingFace `unitary/toxic-bert` model
+3. **FinBERT**: Uses `ProsusAI/finbert` for financial sentiment
+
+If any layer rejects the content, the post is rejected with the specific reason.
+
+## 📝 License
+
+MIT License - feel free to use and modify! 
