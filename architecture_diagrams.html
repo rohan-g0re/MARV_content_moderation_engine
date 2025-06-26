@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Moderation Engine - Architecture</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
+        h1, h2 { color: #333; }
+        .diagram { background: #fafafa; padding: 20px; margin: 20px 0; border-radius: 8px; }
+        .description { background: #e3f2fd; padding: 15px; margin: 10px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛡️ Content Moderation Engine - Complete Architecture</h1>
+        
+        <div class="description">
+            <strong>System Overview:</strong> This page contains ultra-detailed Mermaid diagrams showing the complete workflow from user input to final response.
+        </div>
+
+        <h2>1. High-Level System Architecture</h2>
+        <div class="diagram">
+            <div class="mermaid">
+graph TD
+    A[User Input] --> B[Frontend HTML]
+    B --> C[JavaScript API Call]
+    C --> D[FastAPI Backend]
+    D --> E[Rule-Based Filter]
+    E --> F[Detoxify AI]
+    F --> G[FinBERT AI]
+    G --> H[SQLite Database]
+    H --> I[JSON Response]
+    I --> J[Frontend Update]
+            </div>
+        </div>
+
+        <h2>2. Detailed Frontend Flow</h2>
+        <div class="diagram">
+            <div class="mermaid">
+graph LR
+    A[Content Input] --> B[Validation]
+    B --> C[AJAX Request]
+    C --> D[Loading State]
+    D --> E[API Response]
+    E --> F[Result Display]
+    F --> G[Table Refresh]
+            </div>
+        </div>
+
+        <h2>3. Backend API Processing</h2>
+        <div class="diagram">
+            <div class="mermaid">
+graph TD
+    A[HTTP Request] --> B[CORS Middleware]
+    B --> C[Pydantic Validation]
+    C --> D[Pipeline Entry]
+    D --> E[Rule Filter]
+    E --> F[AI Processing]
+    F --> G[Database Storage]
+    G --> H[Response Creation]
+            </div>
+        </div>
+
+        <h2>4. Moderation Pipeline Details</h2>
+        <div class="diagram">
+            <div class="mermaid">
+graph TD
+    A[Content Input] --> B{Rule-Based Check}
+    B -->|Fail| C[Immediate Reject]
+    B -->|Pass| D{Detoxify Check}
+    D -->|Fail| E[Toxicity Reject]
+    D -->|Pass| F{FinBERT Check}
+    F -->|Fail| G[Financial Risk Reject]
+    F -->|Pass| H[Accept Content]
+    C --> I[Database Save]
+    E --> I
+    G --> I
+    H --> I
+            </div>
+        </div>
+
+        <h2>5. Rule-Based Filter Breakdown</h2>
+        <div class="diagram">
+            <div class="mermaid">
+graph LR
+    A[Text Input] --> B[Load words.json]
+    B --> C[Keyword Scan]
+    C --> D[Regex Patterns]
+    D --> E[URL Detection]
+    D --> F[Email Detection]
+    D --> G[Phone Detection]
+    D --> H[Violence Detection]
+            </div>
+        </div>
+
+        <h2>6. AI Model Processing</h2>
+        <div class="diagram">
+            <div class="mermaid">
+graph TD
+    A[Stage 1 Pass] --> B[Detoxify Model]
+    B --> C[Toxicity Score]
+    C --> D{Score > 0.5?}
+    D -->|Yes| E[Reject Toxic]
+    D -->|No| F[FinBERT Model]
+    F --> G[Financial Sentiment]
+    G --> H{Negative > 0.7?}
+    H -->|Yes| I[Reject Fraud]
+    H -->|No| J[Accept Content]
+            </div>
+        </div>
+
+        <h2>7. Database Operations</h2>
+        <div class="diagram">
+            <div class="mermaid">
+graph LR
+    A[Moderation Result] --> B[SQLAlchemy Session]
+    B --> C[Post Model]
+    C --> D[Set Attributes]
+    D --> E[Commit Transaction]
+    E --> F[Return Post ID]
+            </div>
+        </div>
+
+        <h2>8. Error Handling Flow</h2>
+        <div class="diagram">
+            <div class="mermaid">
+graph TD
+    A[Request Start] --> B{Validation OK?}
+    B -->|No| C[HTTP 422 Error]
+    B -->|Yes| D{Models Available?}
+    D -->|No| E[Fallback Mode]
+    D -->|Yes| F[Full Processing]
+    E --> G[Limited Accuracy]
+    F --> H[Maximum Accuracy]
+    G --> I[Response]
+    H --> I
+            </div>
+        </div>
+
+        <div class="description">
+            <strong>Performance Metrics:</strong>
+            <ul>
+                <li>Rule-based filtering: &lt;50ms</li>
+                <li>Detoxify processing: 2-3 seconds</li>
+                <li>FinBERT processing: 1-2 seconds</li>
+                <li>Database operations: &lt;100ms</li>
+                <li>Total response time: 3-5 seconds</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true });
+    </script>
+</body>
+</html> 
