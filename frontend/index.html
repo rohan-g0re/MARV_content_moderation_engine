@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Moderation System</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .input-section {
+            margin-bottom: 30px;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            resize: vertical;
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 5px;
+            display: none;
+        }
+        .accepted {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .rejected {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .status-accepted {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .status-rejected {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .refresh-btn {
+            background-color: #28a745;
+            margin-bottom: 20px;
+        }
+        .content-cell {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧩 Content Moderation System</h1>
+        
+        <div class="input-section">
+            <label for="content"><strong>Enter your post content:</strong></label>
+            <textarea id="content" placeholder="Type your post content here..."></textarea>
+            <button id="submitBtn" onclick="moderateContent()">🚀 Submit for Moderation</button>
+        </div>
+        
+        <div id="loading" class="loading" style="display: none;">
+            <p>Moderating content...</p>
+        </div>
+        
+        <div id="result" class="result">
+            <h3>📋 Moderation Result</h3>
+            <div id="status"></div>
+            <div id="reason"></div>
+        </div>
+        
+        <div id="error" class="error" style="display: none;"></div>
+    </div>
+
+    <div class="container">
+        <h2>📊 All Moderated Posts</h2>
+        <button class="refresh-btn" onclick="loadPosts()">🔄 Refresh Posts</button>
+        <div id="postsTable"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+        
+        async function moderateContent() {
+            const content = document.getElementById('content').value.trim();
+            const submitBtn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            const error = document.getElementById('error');
+            
+            if (!content) {
+                showError('Please enter some content to moderate.');
+                return;
+            }
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            loading.style.display = 'block';
+            result.style.display = 'none';
+            error.style.display = 'none';
+            
+            try {
+                const response = await fetch(`${API_URL}/moderate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ content: content })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                showResult(data);
+                
+                // Refresh posts table
+                loadPosts();
+                
+            } catch (err) {
+                showError(`Error: ${err.message}. Make sure the backend is running on http://localhost:8000`);
+            } finally {
+                submitBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        }
+        
+        function showResult(data) {
+            const result = document.getElementById('result');
+            const status = document.getElementById('status');
+            const reason = document.getElementById('reason');
+            
+            // Set status
+            if (data.accepted) {
+                status.innerHTML = '<h2 style="color: #28a745;">✅ ACCEPTED</h2>';
+                result.className = 'result accepted';
+            } else {
+                status.innerHTML = '<h2 style="color: #dc3545;">❌ REJECTED</h2>';
+                result.className = 'result rejected';
+            }
+            
+            // Set reason
+            reason.innerHTML = `<p><strong>Reason:</strong> ${data.reason}</p>`;
+            
+            result.style.display = 'block';
+        }
+        
+        function showError(message) {
+            const error = document.getElementById('error');
+            error.textContent = message;
+            error.style.display = 'block';
+        }
+        
+        async function loadPosts() {
+            try {
+                const response = await fetch(`${API_URL}/posts`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const posts = await response.json();
+                displayPosts(posts);
+                
+            } catch (err) {
+                console.error('Error loading posts:', err);
+                document.getElementById('postsTable').innerHTML = '<p style="color: red;">Error loading posts</p>';
+            }
+        }
+        
+        function displayPosts(posts) {
+            const tableDiv = document.getElementById('postsTable');
+            
+            if (posts.length === 0) {
+                tableDiv.innerHTML = '<p>No posts found.</p>';
+                return;
+            }
+            
+            let tableHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Content</th>
+                            <th>Status</th>
+                            <th>Reason</th>
+                            <th>Created At</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            posts.forEach(post => {
+                const statusClass = post.accepted ? 'status-accepted' : 'status-rejected';
+                const statusText = post.accepted ? '✅ Accepted' : '❌ Rejected';
+                const date = new Date(post.created_at).toLocaleString();
+                
+                tableHTML += `
+                    <tr>
+                        <td>${post.id}</td>
+                        <td class="content-cell" title="${post.content}">${post.content}</td>
+                        <td class="${statusClass}">${statusText}</td>
+                        <td>${post.reason}</td>
+                        <td>${date}</td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += '</tbody></table>';
+            tableDiv.innerHTML = tableHTML;
+        }
+        
+        // Load posts on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPosts();
+        });
+        
+        // Allow Enter key to submit
+        document.getElementById('content').addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                moderateContent();
+            }
+        });
+    </script>
+</body>
+</html> 
