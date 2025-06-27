@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Content Moderation Engine - All Architecture Diagrams</title>
+    <title>Content Moderation Engine - Updated Architecture Diagrams</title>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
     <style>
         * {
@@ -21,7 +21,7 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
 
@@ -49,6 +49,18 @@
             color: #7f8c8d;
             font-size: 1.2em;
             margin-bottom: 20px;
+        }
+
+        .upgrade-badge {
+            background: linear-gradient(45deg, #ff6b6b, #ffa726);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            display: inline-block;
+            margin: 10px 5px;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
         }
 
         .stats {
@@ -110,6 +122,16 @@
             border-left: 4px solid #667eea;
         }
 
+        .new-feature {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+
         .mermaid {
             background: white;
             border-radius: 10px;
@@ -162,12 +184,22 @@
 <body>
     <div class="container">
         <header>
-            <h1>🛡️ Content Moderation Engine</h1>
-            <p class="subtitle">Complete Architecture Diagrams Collection</p>
+            <h1>🛡️ Content Moderation Engine v2.0</h1>
+            <p class="subtitle">Enhanced Architecture with FinBERT 5-Layer Band System</p>
+            <div style="margin: 15px 0;">
+                <span class="upgrade-badge">🎯 FinBERT Bands</span>
+                <span class="upgrade-badge">📊 Action Classification</span>
+                <span class="upgrade-badge">🎨 Enhanced UI</span>
+                <span class="upgrade-badge">💾 Extended Database</span>
+            </div>
             <div class="stats">
                 <div class="stat-item">
                     <span class="stat-number">7</span>
-                    <span class="stat-label">Diagrams</span>
+                    <span class="stat-label">Updated Diagrams</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">5</span>
+                    <span class="stat-label">Risk Bands</span>
                 </div>
                 <div class="stat-item">
                     <span class="stat-number">3</span>
@@ -184,214 +216,250 @@
             </div>
         </header>
 
-        <!-- Diagram 1: System Overview -->
+        <!-- Diagram 1: Enhanced System Overview -->
         <div class="diagram-container">
-            <h2 class="diagram-title">🌟 Main System Flow Overview</h2>
+            <h2 class="diagram-title">🌟 Enhanced System Flow with Band Classification<span class="new-feature">NEW</span></h2>
             <div class="diagram-description">
-                <strong>Complete user journey</strong> from frontend input to final response. Shows the high-level flow through all system components including the 3-stage moderation pipeline, database storage, and response generation.
+                <strong>Complete user journey</strong> with the new FinBERT 5-layer band system (SAFE, FLAG_LOW, FLAG_MEDIUM, FLAG_HIGH, BLOCK) and enhanced action classification. Shows sophisticated risk assessment and visual feedback.
             </div>
             <div class="mermaid">
 graph TD
-    A["🌐 Frontend<br/>index.html"] --> B["📤 User Input<br/>Content Submission"]
+    A["🌐 Frontend<br/>index.html<br/>Enhanced UI"] --> B["📤 User Input<br/>Content Submission"]
     B --> C["🚀 HTTP POST Request<br/>/moderate"]
     C --> D["⚡ FastAPI Server<br/>main.py:app"]
     
-    D --> E["🛡️ GuardianModerationEngine<br/>core/moderation.py"]
+    D --> E["🛡️ GuardianModerationEngine v2.0<br/>core/moderation.py"]
     
     E --> F["📋 Stage 1: Rule-Based Filter<br/>Keywords + Regex"]
-    F --> G{"🔍 Keywords Found?"}
-    G -->|Yes| H["❌ REJECT<br/>High Threat"]
+    F --> G{"🔍 Keywords/Patterns Found?"}
+    G -->|Yes| H["❌ BLOCK<br/>Band: BLOCK<br/>Action: BLOCK<br/>Threat: High"]
     G -->|No| I["✅ Continue to Stage 2"]
     
     I --> J["🤖 Stage 2: Detoxify AI<br/>Toxicity Detection"]
-    J --> K{"🧠 Toxic Content?"}
-    K -->|Yes| L["❌ REJECT<br/>Medium/High Threat"]
+    J --> K{"🧠 Toxic Content<br/>Score > 0.5?"}
+    K -->|Yes| L["❌ BLOCK<br/>Band: BLOCK<br/>Action: BLOCK<br/>Threat: Medium/High"]
     K -->|No| M["✅ Continue to Stage 3"]
     
-    M --> N["💰 Stage 3: FinBERT AI<br/>Financial Fraud Detection"]
-    N --> O{"💸 Financial Risk?"}
-    O -->|Yes| P["❌ REJECT<br/>Medium/High Threat"]
-    O -->|No| Q["✅ ACCEPT<br/>Low Threat"]
+    M --> N["💰 Stage 3: FinBERT AI<br/>5-Layer Band System"]
+    N --> O["📊 Confidence Analysis"]
+    O --> P{"🎯 Band Classification"}
     
-    H --> R["💾 Save to Database<br/>SQLite"]
-    L --> R
-    P --> R
-    Q --> R
+    P --> Q["🟢 SAFE<br/>0.0-0.2<br/>Action: PASS"]
+    P --> R["🟡 FLAG_LOW<br/>0.2-0.4<br/>Action: FLAG_LOW"]
+    P --> S["🟠 FLAG_MEDIUM<br/>0.4-0.6<br/>Action: FLAG_MEDIUM"]
+    P --> T["🔴 FLAG_HIGH<br/>0.6-0.8<br/>Action: FLAG_HIGH"]
+    P --> U["🟣 BLOCK<br/>0.8-1.0<br/>Action: BLOCK"]
     
-    R --> S["📊 Return Response<br/>ModerationResponse"]
-    S --> T["🔄 Update Frontend<br/>Display Result"]
+    H --> V["💾 Enhanced Database<br/>SQLite + Band/Action"]
+    L --> V
+    Q --> V
+    R --> V
+    S --> V
+    T --> V
+    U --> V
     
-    U["📁 data/external/words.json<br/>2736 Keywords"] --> F
-    V["🗄️ moderation.db<br/>SQLite Database"] --> R
+    V --> W["📊 Enhanced Response<br/>ModerationResponse v2.0"]
+    W --> X["🔄 Updated Frontend<br/>Band Badges + Confidence Bars"]
+    
+    Y["📁 data/external/words.json<br/>2736 Keywords"] --> F
+    Z["🗄️ moderation.db<br/>Enhanced Schema"] --> V
     
     style A fill:#e1f5fe
     style D fill:#f3e5f5
     style E fill:#fff3e0
-    style F fill:#ffebee
-    style J fill:#e8f5e8
     style N fill:#fff8e1
-    style R fill:#f1f8e9
+    style Q fill:#c8e6c9
+    style R fill:#fff3cd
+    style S fill:#ffe0b3
+    style T fill:#ffcdd2
+    style U fill:#e1bee7
+    style V fill:#f3e5f5
+    style X fill:#e8f5e8
             </div>
         </div>
 
-        <!-- Diagram 2: Engine Pipeline -->
+        <!-- Diagram 2: Enhanced Engine Pipeline -->
         <div class="diagram-container">
-            <h2 class="diagram-title">🔧 Detailed Moderation Engine Pipeline</h2>
+            <h2 class="diagram-title">🔧 Advanced Moderation Pipeline with Band Logic<span class="new-feature">ENHANCED</span></h2>
             <div class="diagram-description">
-                <strong>Internal engine processing</strong> showing the detailed flow through all three moderation stages with decision points, thresholds, and result generation. Each stage has specific models and confidence scoring.
+                <strong>Detailed internal processing</strong> showing the new FinBERT band classification system with precise confidence thresholds, action mapping, and sophisticated financial risk assessment.
             </div>
             <div class="mermaid">
 graph TD
     A["🛡️ GuardianModerationEngine.moderate_content()"] --> B["📝 Input: Content String"]
     
     B --> C["🔴 Stage 1: Rule-Based Filter"]
-    C --> D["📚 Load Keywords from<br/>data/external/words.json"]
-    D --> E["🔍 Check Keywords<br/>Whole Word Matching"]
-    E --> F["🎯 Check Regex Patterns<br/>URLs, Emails, Phone Numbers"]
+    C --> D["📚 Load Keywords from<br/>data/external/words.json<br/>(2736 keywords)"]
+    D --> E["🔍 Whole Word Keyword Matching"]
+    E --> F["🎯 Enhanced Regex Patterns<br/>URLs, Emails, Threats, Violence"]
     F --> G{"❓ Rule Violations?"}
     
-    G -->|Yes| H["❌ Return ModerationResult<br/>accepted=False<br/>stage='rule-based'<br/>threat_level='high'<br/>confidence=1.0"]
+    G -->|Yes| H["❌ Return ModerationResult<br/>accepted=False<br/>stage='rule-based'<br/>threat_level='high'<br/>band='BLOCK'<br/>action='BLOCK'<br/>confidence=1.0"]
     
     G -->|No| I["🟡 Stage 2: Detoxify Check"]
     I --> J["🤖 Initialize Detoxify Model<br/>unitary/toxic-bert"]
-    J --> K["🧠 Classify Text Toxicity"]
-    K --> L["📊 Get Toxicity Score"]
+    J --> K["🧠 Toxicity Classification"]
+    K --> L["📊 Get Toxicity Score (0-1)"]
     L --> M{"🎚️ Score > threshold<br/>(0.5)?"}
     
-    M -->|Yes| N["❌ Return ModerationResult<br/>accepted=False<br/>stage='detoxify'<br/>threat_level='medium/high'<br/>confidence=score"]
+    M -->|Yes| N["❌ Return ModerationResult<br/>accepted=False<br/>stage='detoxify'<br/>threat_level='medium/high'<br/>band='BLOCK'<br/>action='BLOCK'<br/>confidence=score"]
     
-    M -->|No| O["🟢 Stage 3: FinBERT Check"]
+    M -->|No| O["🟢 Stage 3: FinBERT Advanced"]
     O --> P["💰 Initialize FinBERT Model<br/>ProsusAI/finbert"]
-    P --> Q["📈 Analyze Financial Sentiment"]
-    Q --> R["📊 Get Sentiment Score"]
-    R --> S{"📉 Negative + High Confidence<br/>(>0.7)?"}
+    P --> Q["📈 Financial Sentiment Analysis"]
+    Q --> R["📊 Get Sentiment + Confidence"]
+    R --> S{"📉 Negative Sentiment?"}
     
-    S -->|Yes| T["❌ Return ModerationResult<br/>accepted=False<br/>stage='finbert'<br/>threat_level='medium/high'<br/>confidence=score"]
+    S -->|No| T["🟢 Non-Financial Content<br/>band='SAFE'<br/>action='PASS'<br/>threat_level='low'"]
     
-    S -->|No| U["✅ Return ModerationResult<br/>accepted=True<br/>stage='finbert'<br/>threat_level='low'<br/>reason='All checks passed'"]
+    S -->|Yes| U["🎯 _get_finbert_band() Method"]
+    U --> V["📊 5-Layer Band Classification"]
     
-    V["⚙️ Configuration"] --> W["🎚️ toxicity_threshold = 0.5<br/>🎚️ finbert_threshold = 0.7<br/>🎚️ llm_escalation_threshold = 3"]
-    W --> M
-    W --> S
+    V --> W["🟢 SAFE Band<br/>Confidence: 0.0-0.2<br/>action='PASS'<br/>threat_level='low'"]
+    V --> X["🟡 FLAG_LOW Band<br/>Confidence: 0.2-0.4<br/>action='FLAG_LOW'<br/>threat_level='low'"]
+    V --> Y["🟠 FLAG_MEDIUM Band<br/>Confidence: 0.4-0.6<br/>action='FLAG_MEDIUM'<br/>threat_level='medium'"]
+    V --> Z["🔴 FLAG_HIGH Band<br/>Confidence: 0.6-0.8<br/>action='FLAG_HIGH'<br/>threat_level='high'"]
+    V --> AA["🟣 BLOCK Band<br/>Confidence: 0.8-1.0<br/>action='BLOCK'<br/>threat_level='high'"]
+    
+    BB["⚙️ Enhanced Configuration"] --> CC["🎚️ toxicity_threshold = 0.5<br/>🎚️ finbert_threshold = 0.7<br/>🎚️ llm_escalation_threshold = 3<br/>🎯 finbert_bands = 5-layer system"]
+    CC --> M
+    CC --> V
     
     style C fill:#ffebee
     style I fill:#e8f5e8
     style O fill:#fff8e1
+    style U fill:#e1f5fe
+    style V fill:#f3e5f5
+    style W fill:#c8e6c9
+    style X fill:#fff3cd
+    style Y fill:#ffe0b3
+    style Z fill:#ffcdd2
+    style AA fill:#e1bee7
     style H fill:#ffcdd2
     style N fill:#ffcdd2
-    style T fill:#ffcdd2
-    style U fill:#c8e6c9
+    style T fill:#c8e6c9
             </div>
         </div>
 
-        <!-- Diagram 3: Sequence -->
+        <!-- Diagram 3: Enhanced Sequence -->
         <div class="diagram-container">
-            <h2 class="diagram-title">🔄 Frontend-Backend Interaction Sequence</h2>
+            <h2 class="diagram-title">🔄 Advanced Interaction Sequence with Band System<span class="new-feature">UPDATED</span></h2>
             <div class="diagram-description">
-                <strong>Real-time communication flow</strong> between user interface and backend services. Shows the complete request-response cycle including error handling and data persistence.
+                <strong>Real-time communication flow</strong> with enhanced band classification, action determination, and visual feedback including confidence bars and band badges in the frontend.
             </div>
             <div class="mermaid">
 sequenceDiagram
     participant User as 👤 User
-    participant Frontend as 🌐 Frontend<br/>(index.html)
+    participant Frontend as 🌐 Frontend v2.0<br/>(Enhanced UI)
     participant API as ⚡ FastAPI Server<br/>(main.py)
-    participant Engine as 🛡️ ModerationEngine<br/>(moderation.py)
-    participant DB as 🗄️ SQLite Database<br/>(moderation.db)
-    participant Keywords as 📁 Keywords File<br/>(data/external/words.json)
+    participant Engine as 🛡️ ModerationEngine v2.0<br/>(moderation.py)
+    participant DB as 🗄️ Enhanced Database<br/>(band + action columns)
+    participant Keywords as 📁 Keywords File<br/>(2736 words)
     participant AI as 🤖 AI Models<br/>(Detoxify + FinBERT)
     
-    User->>Frontend: Enter content in textarea
-    User->>Frontend: Click "Submit for Moderation"
+    User->>Frontend: Enter content in enhanced form
+    User->>Frontend: Click "🚀 Submit for Moderation"
     
-    Frontend->>Frontend: Validate input (not empty)
-    Frontend->>Frontend: Show loading state
-    
+    Frontend->>Frontend: Enhanced validation & loading state
     Frontend->>API: POST /moderate<br/>{"content": "user text"}
     
     API->>Engine: moderate_content(content)
     
-    Engine->>Keywords: Load keywords list
+    Engine->>Keywords: Load enhanced keyword list
     Keywords-->>Engine: Return 2736 keywords
     
-    Engine->>Engine: Stage 1: Rule-based check
+    Engine->>Engine: Stage 1: Enhanced rule-based check
     
     alt Rule violation found
-        Engine-->>API: ModerationResult(accepted=False)
+        Engine-->>API: ModerationResult(band="BLOCK", action="BLOCK")
     else No rule violation
         Engine->>AI: Stage 2: Detoxify check
         AI-->>Engine: Toxicity score
         
         alt High toxicity
-            Engine-->>API: ModerationResult(accepted=False)
+            Engine-->>API: ModerationResult(band="BLOCK", action="BLOCK")
         else Low toxicity
-            Engine->>AI: Stage 3: FinBERT check
-            AI-->>Engine: Financial sentiment
+            Engine->>AI: Stage 3: Enhanced FinBERT check
+            AI-->>Engine: Financial sentiment + confidence
             
-            alt High financial risk
-                Engine-->>API: ModerationResult(accepted=False)
-            else Low risk
-                Engine-->>API: ModerationResult(accepted=True)
+            Engine->>Engine: _get_finbert_band() classification
+            
+            alt Confidence 0.0-0.2
+                Engine-->>API: ModerationResult(band="SAFE", action="PASS")
+            else Confidence 0.2-0.4
+                Engine-->>API: ModerationResult(band="FLAG_LOW", action="FLAG_LOW")
+            else Confidence 0.4-0.6
+                Engine-->>API: ModerationResult(band="FLAG_MEDIUM", action="FLAG_MEDIUM")
+            else Confidence 0.6-0.8
+                Engine-->>API: ModerationResult(band="FLAG_HIGH", action="FLAG_HIGH")
+            else Confidence 0.8-1.0
+                Engine-->>API: ModerationResult(band="BLOCK", action="BLOCK")
             end
         end
     end
     
-    API->>DB: Save Post to database
+    API->>DB: Save enhanced Post with band/action
     DB-->>API: Return post ID
     
-    API-->>Frontend: ModerationResponse<br/>{accepted, reason, id, etc}
+    API-->>Frontend: Enhanced ModerationResponse<br/>{accepted, reason, band, action, confidence, etc}
     
-    Frontend->>Frontend: Hide loading state
-    Frontend->>Frontend: Display result (accepted/rejected)
-    Frontend->>Frontend: Show reason and threat level
+    Frontend->>Frontend: Display enhanced result UI
+    Frontend->>Frontend: Show band badge with color coding
+    Frontend->>Frontend: Display confidence bar visualization
+    Frontend->>Frontend: Update action status with styling
     
-    Frontend->>API: GET /posts (refresh posts table)
-    API->>DB: Query all posts
-    DB-->>API: Return posts list
-    API-->>Frontend: Posts array
-    Frontend->>Frontend: Update posts table
+    Frontend->>API: GET /posts (refresh enhanced table)
+    API->>DB: Query posts with band/action data
+    DB-->>API: Return enhanced posts array
+    API-->>Frontend: Posts with band/action metadata
+    Frontend->>Frontend: Update table with band badges & confidence
     
-    Note over User,AI: Complete moderation cycle<br/>with real-time feedback
+    Note over User,AI: Complete enhanced moderation cycle<br/>with 5-layer band classification
             </div>
         </div>
 
-        <!-- Diagram 4: Database Operations -->
+        <!-- Diagram 4: Enhanced Database Operations -->
         <div class="diagram-container">
-            <h2 class="diagram-title">💾 Database Operations & API Endpoints</h2>
+            <h2 class="diagram-title">💾 Enhanced Database Schema & Operations<span class="new-feature">EXTENDED</span></h2>
             <div class="diagram-description">
-                <strong>Data persistence and retrieval</strong> showing SQLite database schema, CRUD operations, and all API endpoints for statistics and administration.
+                <strong>Extended data persistence</strong> with new band and action columns, enhanced statistics with band breakdown, and comprehensive metadata tracking for the 5-layer classification system.
             </div>
             <div class="mermaid">
 graph TD
-    A["🚀 FastAPI Application Startup"] --> B["🗄️ Initialize SQLite Database<br/>moderation.db"]
+    A["🚀 FastAPI Application Startup"] --> B["🗄️ Initialize Enhanced SQLite<br/>moderation.db"]
     
-    B --> C["📋 Create Post Table Schema"]
-    C --> D["🏗️ Table: posts<br/>- id (Primary Key)<br/>- content (Text)<br/>- accepted (Boolean)<br/>- reason (Text)<br/>- threat_level (String)<br/>- confidence (String)<br/>- stage (String)<br/>- created_at (DateTime)"]
+    B --> C["📋 Create Enhanced Post Table"]
+    C --> D["🏗️ Enhanced Table: posts<br/>- id (Primary Key)<br/>- content (Text)<br/>- accepted (Boolean)<br/>- reason (Text)<br/>- threat_level (String)<br/>- confidence (String)<br/>🆕 band (String)<br/>🆕 action (String)<br/>- stage (String)<br/>- created_at (DateTime)"]
     
-    E["📤 Moderation Request"] --> F["🛡️ Process Content"]
-    F --> G["📊 Get ModerationResult"]
-    G --> H["💾 Create Post Object"]
+    E["📤 Enhanced Moderation Request"] --> F["🛡️ Process with Band System"]
+    F --> G["📊 Get Enhanced ModerationResult"]
+    G --> H["💾 Create Enhanced Post Object"]
     
     H --> I["🔄 Database Session"]
-    I --> J["➕ Add Post to Session"]
-    J --> K["💾 Commit Transaction"]
+    I --> J["➕ Add Post with Band/Action"]
+    J --> K["💾 Commit Enhanced Transaction"]
     K --> L["🔄 Refresh Post (get ID)"]
     L --> M["🔐 Close Session"]
     
-    M --> N["📈 API Endpoints"]
+    M --> N["📈 Enhanced API Endpoints"]
     
-    N --> O["📚 GET /posts<br/>Retrieve All Posts"]
-    N --> P["📊 GET /stats<br/>Generate Statistics"] 
-    N --> Q["🏠 GET /<br/>System Status"]
-    N --> R["🏥 GET /health<br/>Health Check"]
+    N --> O["📚 GET /posts<br/>Enhanced Post Retrieval"]
+    N --> P["📊 GET /stats<br/>Band-Aware Statistics"] 
+    N --> Q["🏠 GET /<br/>Enhanced System Status"]
+    N --> R["🏥 GET /health<br/>Model Status Check"]
     
-    O --> S["🔍 Query Posts<br/>ORDER BY created_at DESC"]
-    P --> T["📈 Calculate Statistics<br/>- Total posts<br/>- Accepted/Rejected counts<br/>- Acceptance rate<br/>- Breakdown by stage<br/>- Threat level distribution"]
+    O --> S["🔍 Query Enhanced Posts<br/>WITH band/action data<br/>ORDER BY created_at DESC"]
+    P --> T["📈 Calculate Enhanced Stats<br/>- Total posts<br/>- Accepted/Rejected counts<br/>- Acceptance rate<br/>- Breakdown by stage<br/>- Threat level distribution<br/>🆕 Band breakdown<br/>🆕 Action statistics"]
     
-    S --> U["📋 Return JSON Array<br/>Posts with metadata"]
-    T --> V["📊 Return JSON Object<br/>Comprehensive stats"]
+    S --> U["📋 Return Enhanced JSON<br/>Posts with band badges"]
+    T --> V["📊 Return Comprehensive Stats<br/>Including band analytics"]
     
-    W["🔧 Admin Endpoints"] --> X["🔄 POST /admin/reload-keywords<br/>Refresh keyword list"]
-    W --> Y["⚙️ POST /admin/update-thresholds<br/>Modify AI thresholds"]
+    W["🔧 Enhanced Admin Endpoints"] --> X["🔄 POST /admin/reload-keywords<br/>Refresh 2736 keywords"]
+    W --> Y["⚙️ POST /admin/update-thresholds<br/>Modify AI + Band thresholds"]
+    
+    Z["🎯 Band System Data"] --> AA["📊 5-Layer Band Mapping<br/>SAFE: 0.0-0.2<br/>FLAG_LOW: 0.2-0.4<br/>FLAG_MEDIUM: 0.4-0.6<br/>FLAG_HIGH: 0.6-0.8<br/>BLOCK: 0.8-1.0"]
+    
+    AA --> H
     
     style B fill:#e3f2fd
     style D fill:#f3e5f5
@@ -400,111 +468,136 @@ graph TD
     style N fill:#fff8e1
     style S fill:#f1f8e9
     style T fill:#fce4ec
+    style AA fill:#e1f5fe
             </div>
         </div>
 
-        <!-- Diagram 5: AI Models -->
+        <!-- Diagram 5: Advanced AI Models -->
         <div class="diagram-container">
-            <h2 class="diagram-title">🤖 AI Models Processing Pipeline</h2>
+            <h2 class="diagram-title">🤖 AI Models with Advanced Band Processing<span class="new-feature">ADVANCED</span></h2>
             <div class="diagram-description">
-                <strong>Deep dive into AI model processing</strong> showing Detoxify and FinBERT model initialization, text processing, scoring mechanisms, and error handling with graceful fallbacks.
+                <strong>Sophisticated AI processing</strong> featuring the new FinBERT 5-layer band classification system with precise confidence mapping, sentiment analysis, and intelligent action determination.
             </div>
             <div class="mermaid">
 graph TD
-    A["🧠 AI Models Processing Pipeline"] --> B["🤖 Model Initialization"]
+    A["🧠 Enhanced AI Models Pipeline"] --> B["🤖 Model Initialization"]
     
-    B --> C["🔴 Detoxify Model<br/>unitary/toxic-bert"]
-    B --> D["💰 FinBERT Model<br/>ProsusAI/finbert"]
+    B --> C["🔴 Detoxify Model<br/>unitary/toxic-bert<br/>Enhanced Processing"]
+    B --> D["💰 FinBERT Model<br/>ProsusAI/finbert<br/>5-Layer Band System"]
     
     C --> E["📥 Load Transformer Model"]
     E --> F["⚙️ Set Device to CPU"]
-    F --> G["✅ Detoxify Ready"]
+    F --> G["✅ Detoxify Ready<br/>Threshold: 0.5"]
     
     D --> H["📥 Load Financial Model"]
     H --> I["⚙️ Set Device to CPU"] 
-    I --> J["✅ FinBERT Ready"]
+    I --> J["✅ FinBERT Ready<br/>Band System Active"]
     
-    K["📝 Input Text"] --> L["🔴 Stage 2: Detoxify Processing"]
+    K["📝 Input Text"] --> L["🔴 Stage 2: Enhanced Detoxify"]
     
-    L --> M["🧠 Text Classification"]
+    L --> M["🧠 Toxicity Classification"]
     M --> N["📊 Get Prediction<br/>- Label (toxic/non-toxic)<br/>- Confidence Score (0-1)"]
     N --> O{"🎚️ Score > 0.5?"}
     
-    O -->|Yes| P["❌ TOXIC DETECTED<br/>threat_level = 'high/medium'<br/>confidence = score"]
+    O -->|Yes| P["❌ TOXIC DETECTED<br/>band='BLOCK'<br/>action='BLOCK'<br/>threat_level='high/medium'"]
     O -->|No| Q["✅ CONTINUE TO STAGE 3"]
     
-    Q --> R["💰 Stage 3: FinBERT Processing"]
+    Q --> R["💰 Stage 3: Advanced FinBERT"]
     R --> S["📈 Financial Sentiment Analysis"]
-    S --> T["📊 Get Sentiment<br/>- Label (positive/negative/neutral)<br/>- Confidence Score (0-1)"]
-    T --> U{"📉 Negative + Score > 0.7?"}
+    S --> T["📊 Get Enhanced Result<br/>- Sentiment (pos/neg/neutral)<br/>- Confidence Score (0-1)"]
+    T --> U{"📉 Negative Sentiment?"}
     
-    U -->|Yes| V["❌ FINANCIAL RISK<br/>threat_level = 'high/medium'<br/>confidence = score"]
-    U -->|No| W["✅ ALL CHECKS PASSED<br/>threat_level = 'low'<br/>accepted = True"]
+    U -->|No| V["🟢 Non-Financial Content<br/>band='SAFE'<br/>action='PASS'<br/>threat_level='low'"]
     
-    X["⚠️ Error Handling"] --> Y["🔧 Model Loading Failures"]
-    Y --> Z["🔄 Graceful Fallback<br/>- Log warning<br/>- Skip stage<br/>- Continue pipeline"]
+    U -->|Yes| W["🎯 _get_finbert_band() Method"]
+    W --> X["📊 5-Layer Band Classification"]
     
-    AA["🎛️ Configuration"] --> BB["🎚️ Toxicity Threshold: 0.5<br/>🎚️ FinBERT Threshold: 0.7<br/>🎚️ LLM Escalation: 3 (future)"]
+    X --> Y["🟢 SAFE Band<br/>Confidence: 0.0-0.2<br/>action='PASS'<br/>threat_level='low'"]
+    X --> Z["🟡 FLAG_LOW Band<br/>Confidence: 0.2-0.4<br/>action='FLAG_LOW'<br/>threat_level='low'"]
+    X --> AA["🟠 FLAG_MEDIUM Band<br/>Confidence: 0.4-0.6<br/>action='FLAG_MEDIUM'<br/>threat_level='medium'"]
+    X --> BB["🔴 FLAG_HIGH Band<br/>Confidence: 0.6-0.8<br/>action='FLAG_HIGH'<br/>threat_level='high'"]
+    X --> CC["🟣 BLOCK Band<br/>Confidence: 0.8-1.0<br/>action='BLOCK'<br/>threat_level='high'"]
     
-    BB --> O
-    BB --> U
+    DD["⚠️ Enhanced Error Handling"] --> EE["🔧 Graceful Model Failures"]
+    EE --> FF["🔄 Smart Fallbacks<br/>- Log detailed warnings<br/>- Continue pipeline<br/>- Return safe defaults<br/>- Maintain band system"]
+    
+    GG["🎛️ Advanced Configuration"] --> HH["🎚️ Enhanced Thresholds<br/>- Toxicity: 0.5<br/>- FinBERT: 0.7<br/>- LLM Escalation: 3<br/>🎯 Band Thresholds<br/>- SAFE: 0.0-0.2<br/>- FLAG_LOW: 0.2-0.4<br/>- FLAG_MEDIUM: 0.4-0.6<br/>- FLAG_HIGH: 0.6-0.8<br/>- BLOCK: 0.8-1.0"]
+    
+    HH --> O
+    HH --> W
     
     style C fill:#ffebee
     style D fill:#fff8e1
     style G fill:#c8e6c9
     style J fill:#c8e6c9
     style P fill:#ffcdd2
-    style V fill:#ffcdd2
-    style W fill:#c8e6c9
-    style Z fill:#fff3e0
+    style V fill:#c8e6c9
+    style W fill:#e1f5fe
+    style X fill:#f3e5f5
+    style Y fill:#c8e6c9
+    style Z fill:#fff3cd
+    style AA fill:#ffe0b3
+    style BB fill:#ffcdd2
+    style CC fill:#e1bee7
+    style EE fill:#fff3e0
+    style FF fill:#fff3e0
             </div>
         </div>
 
-        <!-- Diagram 6: Architecture -->
+        <!-- Diagram 6: Enhanced Architecture -->
         <div class="diagram-container">
-            <h2 class="diagram-title">🏗️ Complete System Architecture</h2>
+            <h2 class="diagram-title">🏗️ Complete Enhanced System Architecture<span class="new-feature">UPGRADED</span></h2>
             <div class="diagram-description">
-                <strong>High-level system components</strong> showing the layered architecture with frontend, API layer, moderation engine, utilities, data layer, and AI models with their relationships.
+                <strong>Comprehensive system architecture</strong> showcasing the enhanced layered design with the new band classification system, upgraded UI components, and extended database schema.
             </div>
             <div class="mermaid">
 graph TB
-    subgraph "🌐 Frontend Layer"
-        A["🖥️ index.html<br/>- Content submission form<br/>- Real-time results display<br/>- Posts history table<br/>- Statistics dashboard"]
+    subgraph "🌐 Enhanced Frontend Layer"
+        A["🖥️ index.html v2.0<br/>- Enhanced content form<br/>- Band badge visualization<br/>- Confidence bar display<br/>- Color-coded action badges<br/>- Real-time result feedback<br/>- Enhanced posts table<br/>- Advanced statistics"]
     end
     
-    subgraph "⚡ API Layer (FastAPI)"
-        B["🚀 main.py"]
-        C["📋 Core Endpoints<br/>- POST /moderate<br/>- GET /posts<br/>- GET /stats<br/>- GET /health"]
-        D["🔧 Admin Endpoints<br/>- POST /admin/reload-keywords<br/>- POST /admin/update-thresholds"]
+    subgraph "⚡ Enhanced API Layer (FastAPI)"
+        B["🚀 main.py v2.0"]
+        C["📋 Core Endpoints<br/>- POST /moderate (enhanced)<br/>- GET /posts (with bands)<br/>- GET /stats (band analytics)<br/>- GET /health (model status)"]
+        D["🔧 Admin Endpoints<br/>- POST /admin/reload-keywords<br/>- POST /admin/update-thresholds<br/>🆕 Band threshold management"]
     end
     
-    subgraph "🛡️ Moderation Engine"
-        E["🎯 GuardianModerationEngine<br/>(core/moderation.py)"]
-        F["📋 Stage 1: Rule-Based<br/>- Keywords matching<br/>- Regex patterns<br/>- URL/Email detection"]
-        G["🤖 Stage 2: Detoxify AI<br/>- Toxicity classification<br/>- unitary/toxic-bert<br/>- Threshold: 0.5"]
-        H["💰 Stage 3: FinBERT AI<br/>- Financial sentiment<br/>- ProsusAI/finbert<br/>- Threshold: 0.7"]
+    subgraph "🛡️ Enhanced Moderation Engine"
+        E["🎯 GuardianModerationEngine v2.0<br/>(core/moderation.py)"]
+        F["📋 Stage 1: Enhanced Rule-Based<br/>- 2736 keywords matching<br/>- Advanced regex patterns<br/>- Enhanced threat detection<br/>- Direct BLOCK classification"]
+        G["🤖 Stage 2: Enhanced Detoxify<br/>- Toxicity classification<br/>- unitary/toxic-bert<br/>- Threshold: 0.5<br/>- BLOCK on detection"]
+        H["💰 Stage 3: Advanced FinBERT<br/>- Financial sentiment analysis<br/>- ProsusAI/finbert<br/>🆕 5-Layer Band System<br/>🆕 _get_finbert_band() method<br/>🆕 Confidence-based classification"]
     end
     
-    subgraph "🔧 Utilities & Helpers"
-        I["⚙️ helpers.py<br/>- Keyword loading<br/>- Database operations<br/>- Export functions"]
+    subgraph "🎯 Band Classification System"
+        I["🟢 SAFE Band (0.0-0.2)<br/>action='PASS'<br/>threat_level='low'"]
+        J["🟡 FLAG_LOW Band (0.2-0.4)<br/>action='FLAG_LOW'<br/>threat_level='low'"]
+        K["🟠 FLAG_MEDIUM Band (0.4-0.6)<br/>action='FLAG_MEDIUM'<br/>threat_level='medium'"]
+        L["🔴 FLAG_HIGH Band (0.6-0.8)<br/>action='FLAG_HIGH'<br/>threat_level='high'"]
+        M["🟣 BLOCK Band (0.8-1.0)<br/>action='BLOCK'<br/>threat_level='high'"]
     end
     
-    subgraph "💾 Data Layer"
-        J["📁 data/external/words.json<br/>2736 Keywords"]
-        K["🗄️ moderation.db<br/>SQLite Database<br/>- Posts table<br/>- Metadata storage"]
+    subgraph "🔧 Enhanced Utilities"
+        N["⚙️ helpers.py v2.0<br/>- Enhanced keyword loading<br/>- Band-aware operations<br/>- Advanced export functions<br/>- Confidence calculations"]
     end
     
-    subgraph "🤖 AI Models"
-        L["🧠 Detoxify Model<br/>Text Classification<br/>CPU Processing"]
-        M["📈 FinBERT Model<br/>Financial Analysis<br/>CPU Processing"]
+    subgraph "💾 Enhanced Data Layer"
+        O["📁 data/external/words.json<br/>2736 Enhanced Keywords"]
+        P["🗄️ moderation.db v2.0<br/>Enhanced SQLite Schema<br/>- Posts table<br/>🆕 band column<br/>🆕 action column<br/>- Enhanced metadata<br/>- Band analytics support"]
     end
     
-    subgraph "🔄 Request Flow"
-        N["1️⃣ User Input"] --> O["2️⃣ HTTP Request"]
-        O --> P["3️⃣ Moderation Pipeline"]
-        P --> Q["4️⃣ Database Storage"]
-        Q --> R["5️⃣ Response Generation"]
-        R --> S["6️⃣ Frontend Update"]
+    subgraph "🤖 Advanced AI Models"
+        Q["🧠 Enhanced Detoxify<br/>Text Classification<br/>CPU Processing<br/>Threshold Management"]
+        R["📈 Advanced FinBERT<br/>Financial Analysis<br/>5-Layer Classification<br/>Band Determination<br/>CPU Processing"]
+    end
+    
+    subgraph "🔄 Enhanced Request Flow"
+        S["1️⃣ Enhanced User Input"] --> T["2️⃣ Validated HTTP Request"]
+        T --> U["3️⃣ Advanced Moderation Pipeline"]
+        U --> V["4️⃣ Band Classification"]
+        V --> W["5️⃣ Enhanced Database Storage"]
+        W --> X["6️⃣ Rich Response Generation"]
+        X --> Y["7️⃣ Visual Frontend Update"]
     end
     
     A -.-> B
@@ -514,81 +607,104 @@ graph TB
     E --> F
     F --> G
     G --> H
-    E --> I
-    I --> J
-    E --> K
-    G --> L
+    H --> I
+    H --> J
+    H --> K
+    H --> L
     H --> M
+    E --> N
+    N --> O
+    E --> P
+    G --> Q
+    H --> R
     
     style A fill:#e1f5fe
     style E fill:#fff3e0
     style F fill:#ffebee
     style G fill:#e8f5e8
     style H fill:#fff8e1
-    style J fill:#f3e5f5
-    style K fill:#e3f2fd
-    style L fill:#e8f5e8
-    style M fill:#fff8e1
+    style I fill:#c8e6c9
+    style J fill:#fff3cd
+    style K fill:#ffe0b3
+    style L fill:#ffcdd2
+    style M fill:#e1bee7
+    style O fill:#f3e5f5
+    style P fill:#e3f2fd
+    style Q fill:#e8f5e8
+    style R fill:#fff8e1
             </div>
         </div>
 
-        <!-- Diagram 7: Data Flow -->
+        <!-- Diagram 7: Complete Enhanced Data Flow -->
         <div class="diagram-container">
-            <h2 class="diagram-title">📊 Comprehensive End-to-End Data Flow</h2>
+            <h2 class="diagram-title">📊 Complete Enhanced End-to-End Data Flow<span class="new-feature">COMPREHENSIVE</span></h2>
             <div class="diagram-description">
-                <strong>Complete process visualization</strong> from user input to final result, showing every step, decision point, validation, and data transformation in the moderation pipeline.
+                <strong>Ultimate process visualization</strong> showing every step from user input to band classification, including the new 5-layer system, confidence scoring, action determination, and enhanced visual feedback.
             </div>
             <div class="mermaid">
 flowchart TD
-    Start([👤 User starts content moderation]) --> Input["📝 Enter content in frontend form<br/>(index.html)"]
+    Start([👤 User starts enhanced moderation]) --> Input["📝 Enter content in enhanced form<br/>(index.html v2.0)"]
     
-    Input --> Validate{"🔍 Frontend Validation<br/>Content not empty?"}
-    Validate -->|No| Error1["❌ Show error message"]
-    Validate -->|Yes| Submit["📤 Submit POST /moderate request"]
+    Input --> Validate{"🔍 Enhanced Validation<br/>Content not empty?"}
+    Validate -->|No| Error1["❌ Show enhanced error"]
+    Validate -->|Yes| Submit["📤 Submit enhanced POST /moderate"]
     
-    Submit --> Server["⚡ FastAPI receives request<br/>(main.py)"]
-    Server --> InitEngine["🛡️ Initialize GuardianModerationEngine"]
+    Submit --> Server["⚡ FastAPI v2.0 receives request<br/>(main.py)"]
+    Server --> InitEngine["🛡️ Initialize Enhanced Engine v2.0"]
     
-    InitEngine --> LoadKeywords["📚 Load keywords from<br/>data/external/words.json<br/>(2736 keywords)"]
-    LoadKeywords --> LoadModels["🤖 Load AI models<br/>Detoxify + FinBERT"]
+    InitEngine --> LoadKeywords["📚 Load 2736 keywords from<br/>data/external/words.json"]
+    LoadKeywords --> LoadModels["🤖 Load enhanced AI models<br/>Detoxify + FinBERT v2.0"]
     
-    LoadModels --> Stage1["📋 STAGE 1: Rule-Based Filter"]
-    Stage1 --> CheckKeywords["🔍 Check for banned keywords<br/>Whole word matching"]
-    CheckKeywords --> CheckRegex["🎯 Check regex patterns<br/>URLs, emails, phones, threats"]
+    LoadModels --> Stage1["📋 STAGE 1: Enhanced Rule-Based"]
+    Stage1 --> CheckKeywords["🔍 Enhanced keyword matching<br/>Whole word + case insensitive"]
+    CheckKeywords --> CheckRegex["🎯 Advanced regex patterns<br/>URLs, emails, threats, violence"]
     
-    CheckRegex --> Rule1{"❓ Rule violations found?"}
-    Rule1 -->|Yes| Reject1["❌ REJECT<br/>Reason: Rule-based<br/>Threat: High<br/>Confidence: 1.0"]
-    Rule1 -->|No| Stage2["🤖 STAGE 2: Detoxify Check"]
+    CheckRegex --> Rule1{"❓ Rule violations detected?"}
+    Rule1 -->|Yes| Reject1["❌ IMMEDIATE BLOCK<br/>Band: BLOCK<br/>Action: BLOCK<br/>Threat: High<br/>Confidence: 1.0"]
+    Rule1 -->|No| Stage2["🤖 STAGE 2: Enhanced Detoxify"]
     
-    Stage2 --> Detoxify["🧠 Process with toxic-bert model"]
+    Stage2 --> Detoxify["🧠 Process with enhanced toxic-bert"]
     Detoxify --> ToxicScore["📊 Get toxicity score (0-1)"]
     ToxicScore --> Toxic1{"🎚️ Score > 0.5 threshold?"}
     
-    Toxic1 -->|Yes| Reject2["❌ REJECT<br/>Reason: Toxic content<br/>Threat: Medium/High<br/>Confidence: Score"]
-    Toxic1 -->|No| Stage3["💰 STAGE 3: FinBERT Check"]
+    Toxic1 -->|Yes| Reject2["❌ TOXICITY BLOCK<br/>Band: BLOCK<br/>Action: BLOCK<br/>Threat: Medium/High<br/>Confidence: Score"]
+    Toxic1 -->|No| Stage3["💰 STAGE 3: Advanced FinBERT"]
     
-    Stage3 --> FinBERT["📈 Process with FinBERT model"]
-    FinBERT --> FinScore["📊 Get financial sentiment"]
-    FinScore --> Fin1{"📉 Negative + Score > 0.7?"}
+    Stage3 --> FinBERT["📈 Process with enhanced FinBERT"]
+    FinBERT --> FinSentiment["📊 Get financial sentiment + confidence"]
+    FinSentiment --> SentimentCheck{"📉 Negative sentiment?"}
     
-    Fin1 -->|Yes| Reject3["❌ REJECT<br/>Reason: Financial risk<br/>Threat: Medium/High<br/>Confidence: Score"]
-    Fin1 -->|No| Accept["✅ ACCEPT<br/>Reason: All checks passed<br/>Threat: Low<br/>Stage: finbert"]
+    SentimentCheck -->|No| SafeResult["🟢 NON-FINANCIAL SAFE<br/>Band: SAFE<br/>Action: PASS<br/>Threat: Low"]
     
-    Reject1 --> SaveDB["💾 Save to moderation.db"]
+    SentimentCheck -->|Yes| BandClass["🎯 _get_finbert_band() classification"]
+    BandClass --> BandLogic{"📊 Confidence-based banding"}
+    
+    BandLogic --> Band1["🟢 SAFE Band<br/>Confidence: 0.0-0.2<br/>Action: PASS<br/>Threat: Low<br/>✅ ACCEPT"]
+    BandLogic --> Band2["🟡 FLAG_LOW Band<br/>Confidence: 0.2-0.4<br/>Action: FLAG_LOW<br/>Threat: Low<br/>✅ ACCEPT"]
+    BandLogic --> Band3["🟠 FLAG_MEDIUM Band<br/>Confidence: 0.4-0.6<br/>Action: FLAG_MEDIUM<br/>Threat: Medium<br/>✅ ACCEPT"]
+    BandLogic --> Band4["🔴 FLAG_HIGH Band<br/>Confidence: 0.6-0.8<br/>Action: FLAG_HIGH<br/>Threat: High<br/>✅ ACCEPT"]
+    BandLogic --> Band5["🟣 BLOCK Band<br/>Confidence: 0.8-1.0<br/>Action: BLOCK<br/>Threat: High<br/>❌ REJECT"]
+    
+    Reject1 --> SaveDB["💾 Save to enhanced database<br/>with band + action columns"]
     Reject2 --> SaveDB
-    Reject3 --> SaveDB
-    Accept --> SaveDB
+    SafeResult --> SaveDB
+    Band1 --> SaveDB
+    Band2 --> SaveDB
+    Band3 --> SaveDB
+    Band4 --> SaveDB
+    Band5 --> SaveDB
     
-    SaveDB --> CreatePost["🏗️ Create Post record<br/>with all metadata"]
+    SaveDB --> CreatePost["🏗️ Create enhanced Post record<br/>with band/action metadata"]
     CreatePost --> GetID["🆔 Get assigned post ID"]
-    GetID --> Response["📊 Create ModerationResponse<br/>JSON with result details"]
+    GetID --> Response["📊 Create enhanced ModerationResponse<br/>JSON with band/action/confidence"]
     
-    Response --> Frontend["🌐 Send response to frontend"]
-    Frontend --> Display["📺 Display result to user<br/>Green for accept, Red for reject"]
-    Display --> RefreshPosts["🔄 Refresh posts table<br/>GET /posts endpoint"]
+    Response --> Frontend["🌐 Send to enhanced frontend"]
+    Frontend --> DisplayResult["📺 Display enhanced result<br/>Band badges + confidence bars"]
+    DisplayResult --> UpdateTable["🔄 Refresh enhanced posts table<br/>GET /posts with bands"]
     
-    RefreshPosts --> ShowStats["📈 Update statistics<br/>GET /stats endpoint"]
-    ShowStats --> End([✅ Process complete])
+    UpdateTable --> ShowStats["📈 Update enhanced statistics<br/>GET /stats with band analytics"]
+    ShowStats --> VisualFeedback["🎨 Show visual feedback<br/>Color-coded bands + actions"]
+    VisualFeedback --> End([✅ Enhanced process complete])
     
     Error1 --> End
     
@@ -596,12 +712,18 @@ flowchart TD
     style Stage1 fill:#ffebee
     style Stage2 fill:#e8f5e8
     style Stage3 fill:#fff8e1
+    style BandClass fill:#e1f5fe
+    style Band1 fill:#c8e6c9
+    style Band2 fill:#fff3cd
+    style Band3 fill:#ffe0b3
+    style Band4 fill:#ffcdd2
+    style Band5 fill:#e1bee7
     style Reject1 fill:#ffcdd2
     style Reject2 fill:#ffcdd2
-    style Reject3 fill:#ffcdd2
-    style Accept fill:#c8e6c9
+    style SafeResult fill:#c8e6c9
     style SaveDB fill:#e3f2fd
-    style Display fill:#f1f8e9
+    style DisplayResult fill:#f1f8e9
+    style VisualFeedback fill:#e8f5e8
             </div>
         </div>
     </div>
@@ -609,34 +731,56 @@ flowchart TD
     <button class="back-to-top" onclick="scrollToTop()">⬆️</button>
 
     <script>
-        // Initialize Mermaid
+        // Initialize Mermaid with enhanced settings
         mermaid.initialize({
             startOnLoad: true,
             theme: 'default',
             securityLevel: 'loose',
             flowchart: {
                 useMaxWidth: true,
-                htmlLabels: true
+                htmlLabels: true,
+                curve: 'basis'
+            },
+            sequence: {
+                diagramMarginX: 50,
+                diagramMarginY: 10,
+                actorMargin: 50,
+                width: 150,
+                height: 65,
+                boxMargin: 10,
+                boxTextMargin: 5,
+                noteMargin: 10,
+                messageMargin: 35
             }
         });
 
-        // Back to top functionality
+        // Enhanced back to top functionality
         window.addEventListener('scroll', function() {
             const backToTop = document.querySelector('.back-to-top');
             if (window.pageYOffset > 300) {
                 backToTop.style.display = 'block';
+                backToTop.style.opacity = '1';
             } else {
                 backToTop.style.display = 'none';
+                backToTop.style.opacity = '0';
             }
         });
 
         function scrollToTop() {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            window.scrollTo({ 
+                top: 0, 
+                behavior: 'smooth' 
+            });
         }
 
-        console.log('🎉 Content Moderation Engine - All Diagrams Loaded!');
-        console.log('📊 7 diagrams displayed vertically');
-        console.log('🔄 Scroll to view all diagrams');
+        // Enhanced console logging
+        console.log('🎉 Enhanced Content Moderation Engine v2.0 - All Diagrams Loaded!');
+        console.log('📊 7 enhanced diagrams with 5-layer band system');
+        console.log('🎯 Features: Band classification, action mapping, confidence visualization');
+        console.log('🔄 Scroll to view all enhanced diagrams');
+        
+        // Add smooth scroll behavior for better UX
+        document.documentElement.style.scrollBehavior = 'smooth';
     </script>
 </body>
 </html> 
