@@ -1,173 +1,340 @@
-# 🧩 Content Moderation System
+# MARV Content Moderation Engine
 
-A simple, clean content moderation system with three-layer filtering: rule-based, Detoxify toxicity detection, and FinBERT fraud detection.
+A production-ready, multi-layered content moderation system with rule-based filtering, ML/AI detection, and LLM escalation.
 
-## ✨ Features
+## 🏗️ Architecture Overview
 
-- **Three-Layer Moderation Pipeline**:
-  1. **Rule-based filtering** (keywords from `words.json` + regex patterns)
-  2. **Detoxify** toxicity detection
-  3. **FinBERT** financial fraud detection
-
-- **Clean UI**: Simple HTML frontend with real-time results
-- **Database Storage**: SQLite with all moderation history
-- **RESTful API**: FastAPI backend with automatic documentation
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Frontend UI   │───▶│   FastAPI Backend│───▶│  Moderation     │
+│   (React/HTML)  │    │   (Python 3.11+) │    │  Pipeline       │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+                              │
+                    ┌─────────┴─────────┐
+                    │                   │
+            ┌───────▼──────┐   ┌───────▼──────┐
+            │   Database   │   │   ML Models  │
+            │ (SQLite/PG)  │   │(Detoxify/    │
+            └──────────────┘   │ FinBERT/LLM) │
+                               └──────────────┘
+```
 
 ## 🚀 Quick Start
 
-### 1. Install Dependencies
+### Prerequisites
+- Python 3.11+
+- Node.js 18+ (for React frontend)
+- Docker (optional, for containerization)
 
-```powershell
+### 1. Setup Environment
+```bash
+# Clone repository
+git clone https://github.com/rohan-g0re/MARV_content_moderation_engine.git
+cd MARV_content_moderation_engine
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-### 2. Run the Backend
+### 2. Initialize Database
+```bash
+# Setup SQLite database with sample rules
+python scripts/setup_database.py
 
-```powershell
-cd backend
-python main.py
+# Or for PostgreSQL (production)
+export DATABASE_URL="postgresql://user:pass@localhost/marv_db"
+python scripts/setup_database.py --postgres
 ```
 
-The API will be available at: http://localhost:8000
+### 3. Start Backend API
+```bash
+# Development mode
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
-### 3. Open the Frontend
-
-Open `frontend/index.html` in your browser, or serve it with:
-
-```powershell
-# Using Python
-python -m http.server 8080
-
-# Then visit: http://localhost:8080/frontend/index.html
+# Production mode
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
 ```
 
-### 4. Test the System
-
-```powershell
-python test_moderation.py
+### 4. Start Frontend (Optional)
+```bash
+cd frontend
+npm install
+npm start
 ```
-
-## 📋 API Endpoints
-
-### POST /moderate
-Moderate content through the three-layer pipeline.
-
-**Request:**
-```json
-{
-  "content": "Your text content here"
-}
-```
-
-**Response:**
-```json
-{
-  "accepted": false,
-  "reason": "Rule-based: scammer",
-  "id": 1
-}
-```
-
-### GET /posts
-Get all moderated posts with their results.
-
-### GET /health
-Health check endpoint.
-
-## 🧪 Testing
-
-### Manual Testing with PowerShell
-
-```powershell
-# Test moderation
-Invoke-RestMethod -Uri "http://localhost:8000/moderate" -Method POST -ContentType "application/json" -Body '{"content": "You are a scammer and I hate this!"}'
-
-# Get all posts
-Invoke-RestMethod -Uri "http://localhost:8000/posts" -Method GET
-```
-
-### Alternative using curl (if available)
-
-```powershell
-# Test moderation
-curl -X POST http://localhost:8000/moderate -H "Content-Type: application/json" -d '{"content": "You are a scammer and I hate this!"}'
-
-# Get all posts
-curl http://localhost:8000/posts
-```
-
-### Test Cases
-
-The system includes test cases for:
-- Normal content (should be accepted)
-- Rule-based violations (profanity from `words.json`)
-- Toxic content (high toxicity scores)
-- Financial fraud indicators
-- URL/email patterns
 
 ## 📁 Project Structure
 
 ```
-├── backend/
-│   └── main.py              # FastAPI backend
-├── frontend/
-│   └── index.html           # Simple HTML UI
-├── words.json               # Profanity keywords (2700+ words)
-├── requirements.txt         # Python dependencies
-├── test_moderation.py       # Test script
-└── README.md               # This file
+MARV_content_moderation_engine/
+├── app/                          # FastAPI application
+│   ├── api/                      # API routes
+│   │   ├── v1/
+│   │   │   ├── moderation.py     # Main moderation endpoint
+│   │   │   ├── posts.py          # Post management
+│   │   │   └── admin.py          # Admin endpoints
+│   │   └── moderation.py         # Moderation result model
+│   ├── core/                     # Core configuration
+│   │   ├── config.py             # Settings management
+│   │   ├── database.py           # Database connection
+│   │   └── security.py           # Authentication
+│   ├── models/                   # Database models
+│   │   ├── post.py               # Post model
+│   │   └── user.py               # User model
+│   ├── services/                 # Business logic
+│   │   ├── moderation_service.py # Main moderation pipeline
+│   │   ├── ml_service.py         # ML model integration
+│   │   ├── llm_service.py        # LLM integration
+│   │   └── rule_service.py       # Rule-based filtering
+│   └── utils/                    # Utilities
+│       ├── text_processing.py    # Text normalization
+│       └── validators.py         # Input validation
+├── frontend/                     # React frontend
+│   ├── src/
+│   │   ├── components/           # React components
+│   │   ├── pages/                # Page components
+│   │   └── services/             # API client
+├── scripts/                      # Utility scripts
+│   ├── setup_database.py         # Database initialization
+│   ├── generate_posts.py         # Test data generation
+│   └── benchmark.py              # Performance testing
+├── tests/                        # Test suite
+│   ├── test_moderation.py        # Moderation tests
+│   ├── test_api.py               # API tests
+│   └── test_ml.py                # ML model tests
+├── data/                         # Data files
+│   ├── rules/                    # Moderation rules
+│   ├── models/                   # ML model files
+│   └── samples/                  # Test samples
+├── docs/                         # Documentation
+├── config/                       # Configuration files
+└── docker/                       # Docker configuration
 ```
 
-## ⚙️ Configuration
+## 🔧 Configuration
 
-### Keywords File
-The system uses `words.json` which contains 2700+ profanity and inappropriate words. You can:
-- Add new words to the JSON array
-- Remove words you don't want to filter
-- Replace with your own custom list
+### Environment Variables
+Create a `.env` file in the root directory:
 
-### Model Thresholds
-Modify thresholds in `backend/main.py`:
-- Detoxify toxicity threshold: `toxicity_score > 0.5`
-- FinBERT fraud threshold: `confidence > 0.7`
+```env
+# Database
+DATABASE_URL=sqlite:///./marv.db
+# DATABASE_URL=postgresql://user:pass@localhost/marv_db
 
-## 🔧 Troubleshooting
+# ML Models
+DETOXIFY_MODEL=original
+FINBERT_MODEL=ProsusAI/finbert
 
-### Common Issues
+# LLM Integration
+OLLAMA_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.1
 
-1. **Models not loading**: The system will fall back to rule-based filtering
-2. **Database errors**: SQLite file will be created automatically
-3. **CORS issues**: Backend includes CORS middleware for all origins
+# API Settings
+API_HOST=0.0.0.0
+API_PORT=8000
+DEBUG=True
 
-### Manual Database Inspection
-
-```powershell
-# Using SQLite CLI (if installed)
-sqlite3 moderation.db
-.tables
-SELECT * FROM posts ORDER BY created_at DESC;
+# Security
+SECRET_KEY=your-secret-key-here
 ```
 
-## 📊 Database Schema
+## 🧠 Moderation Pipeline
 
-```sql
-CREATE TABLE posts (
-    id INTEGER PRIMARY KEY,
-    content TEXT NOT NULL,
-    accepted BOOLEAN NOT NULL,
-    reason TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+The system uses a multi-layered approach:
+
+### Layer 1: Rule-Based Filtering
+- **Regex patterns**: URLs, emails, phone numbers
+- **Keyword matching**: Profanity, threats, spam
+- **Severity scoring**: 1-10 scale per rule
+
+### Layer 2: ML/AI Detection
+- **Detoxify**: Toxicity detection (0-1 score)
+- **FinBERT**: Financial sentiment analysis
+- **Custom models**: Domain-specific classifiers
+
+### Layer 3: LLM Escalation (Optional)
+- **Ollama/LLaMA 3.1**: Complex reasoning for borderline cases
+- **Threshold-based**: Only for uncertain cases (10-15% of posts)
+- **Cost-aware**: Minimizes API calls
+
+### Decision Logic
+```python
+def determine_action(threat_level, ml_scores, llm_feedback):
+    if threat_level == "CRITICAL":
+        return "BLOCK"
+    elif threat_level == "HIGH":
+        return "QUARANTINE"
+    elif threat_level == "MEDIUM":
+        return "FLAG"
+    else:
+        return "ACCEPT"
 ```
 
-## 🎯 Moderation Logic
+## 📊 API Endpoints
 
-1. **Rule-based Filter**: Checks 2700+ keywords from `words.json` and regex patterns
-2. **Detoxify**: Uses HuggingFace `unitary/toxic-bert` model
-3. **FinBERT**: Uses `ProsusAI/finbert` for financial sentiment
+### Core Endpoints
+- `POST /api/v1/moderate` - Main moderation endpoint
+- `GET /api/v1/posts` - List all posts
+- `GET /api/v1/posts/{id}` - Get specific post
+- `POST /api/v1/posts/{id}/feedback` - Submit feedback
 
-If any layer rejects the content, the post is rejected with the specific reason.
+### Admin Endpoints
+- `GET /api/v1/admin/stats` - System statistics
+- `POST /api/v1/admin/rules` - Add/modify rules
+- `GET /api/v1/admin/logs` - System logs
 
-## 📝 License
+### Example Usage
+```bash
+# Moderate content
+curl -X POST "http://localhost:8000/api/v1/moderate" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "content": "This is a test post",
+       "user_id": "user123",
+       "content_type": "text"
+     }'
 
-MIT License - feel free to use and modify! 
+# Get moderation result
+{
+  "post_id": "post_123",
+  "action": "ACCEPT",
+  "threat_level": "LOW",
+  "confidence": 0.95,
+  "explanation": "Content passed all checks",
+  "processing_time_ms": 45,
+  "metadata": {
+    "rule_matches": 0,
+    "toxicity_score": 0.1,
+    "fraud_score": 0.05
+  }
+}
+```
+
+## 🧪 Testing
+
+### Run All Tests
+```bash
+pytest tests/ -v
+```
+
+### Generate Test Data
+```bash
+python scripts/generate_posts.py --count 100 --output data/samples/test_posts.json
+```
+
+### Performance Benchmark
+```bash
+python scripts/benchmark.py --posts data/samples/test_posts.json
+```
+
+### Manual Testing
+```bash
+# Start the API
+uvicorn app.main:app --reload
+
+# Test with sample posts
+python scripts/test_moderation.py
+```
+
+## 🐳 Docker Deployment
+
+### Development
+```bash
+docker-compose -f docker/docker-compose.dev.yml up --build
+```
+
+### Production
+```bash
+docker-compose -f docker/docker-compose.prod.yml up --build
+```
+
+## 📈 Monitoring & Logging
+
+### Metrics
+- Processing time per post
+- Accuracy by content type
+- LLM escalation frequency
+- Error rates
+
+### Logs
+- Structured JSON logging
+- Request/response tracking
+- Error stack traces
+- Performance metrics
+
+## 🔄 Adding New Moderation Layers
+
+### 1. Create Service
+```python
+# app/services/custom_service.py
+class CustomModerationService:
+    def __init__(self):
+        self.model = load_model()
+    
+    async def analyze(self, content: str) -> Dict:
+        # Your custom logic
+        return {"score": 0.5, "confidence": 0.8}
+```
+
+### 2. Integrate into Pipeline
+```python
+# app/services/moderation_service.py
+class ModerationService:
+    def __init__(self):
+        self.custom_service = CustomModerationService()
+    
+    async def moderate_content(self, content: str) -> ModerationResult:
+        # Add to pipeline
+        custom_result = await self.custom_service.analyze(content)
+        # ... rest of pipeline
+```
+
+### 3. Update Configuration
+```python
+# app/core/config.py
+class Settings:
+    ENABLE_CUSTOM_MODERATION: bool = True
+    CUSTOM_MODERATION_WEIGHT: float = 0.3
+```
+
+## 🔒 Security Considerations
+
+- Input validation and sanitization
+- Rate limiting on API endpoints
+- Authentication for admin functions
+- Secure database connections
+- Model file integrity checks
+
+## 🚀 Performance Optimization
+
+- Async processing for ML models
+- Database connection pooling
+- Caching for frequent queries
+- Model quantization for faster inference
+- Horizontal scaling with load balancers
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Add tests for new functionality
+4. Ensure all tests pass
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🆘 Support
+
+For issues and questions:
+- Create an issue on GitHub
+- Check the documentation in `/docs`
+- Review the test examples
+
+---
+
+**Built with ❤️ for safe online communities** 

@@ -1,54 +1,69 @@
-# Core Backend Dependencies
+# MARV Content Moderation Engine - Production Dependencies
+
+# FastAPI and web framework
 fastapi==0.104.1
-uvicorn==0.24.0
+uvicorn[standard]==0.24.0
 pydantic==2.5.0
-python-multipart==0.0.6
+pydantic-settings==2.1.0
 
-# AI/ML Dependencies
-transformers==4.35.2
-torch==2.7.1
-sentence-transformers
-numpy
-pandas
-scikit-learn
-detoxify==0.5.2
-
-# Database Dependencies
+# Database
 sqlalchemy==2.0.23
-psycopg2-binary
-alembic
+alembic==1.13.1
+psycopg2-binary==2.9.9  # PostgreSQL adapter
 
-# API and HTTP
-requests
-aiohttp
-httpx
+# HTTP client for LLM integration
+aiohttp==3.9.1
+httpx==0.25.2
 
-# Environment and Configuration
-python-dotenv
-pydantic-settings
+# ML/AI Models
+transformers==4.36.2
+torch==2.7.1
+detoxify==0.5.2
+scikit-learn==1.3.2
 
-# Logging and Monitoring
-structlog
-rich
-
-# Data Processing
-nltk
-spacy
-textblob
-
-# Development Dependencies
-pytest
-pytest-asyncio
-black
-flake8
-mypy
-
-# Security
-cryptography
-passlib[bcrypt]
-python-jose[cryptography]
+# Text processing
+nltk==3.8.1
+spacy==3.7.2
 
 # Utilities
-python-dateutil
-tqdm
-click
+python-multipart==0.0.6
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-dotenv==1.0.0
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx==0.25.2
+
+# Development and monitoring
+black==23.11.0
+flake8==6.1.0
+mypy==1.7.1
+pre-commit==3.6.0
+
+# Logging and monitoring
+structlog==23.2.0
+prometheus-client==0.19.0
+
+# Security
+cryptography==45.0.4
+bcrypt==4.1.2
+
+# Optional: For production deployment
+gunicorn==21.2.0
+redis==5.0.1
+celery==5.3.4
+
+# Optional: For enhanced ML capabilities
+numpy==1.26.4
+pandas==2.1.4
+matplotlib==3.8.2
+seaborn==0.13.0
+
+# Optional: For Docker deployment
+docker==6.1.3
+
+# Optional: For API documentation
+mkdocs==1.5.3
+mkdocs-material==9.4.8

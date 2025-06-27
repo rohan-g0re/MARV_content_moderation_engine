@@ -3,225 +3,438 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Content Moderation System</title>
+    <title>MARV Content Moderation Engine</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
             background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
         }
-        h1 {
-            color: #333;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .input-section {
-            margin-bottom: 30px;
-        }
-        textarea {
-            width: 100%;
-            height: 150px;
-            padding: 15px;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
-            resize: vertical;
-            margin-bottom: 20px;
-        }
-        button {
-            background-color: #007bff;
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
             color: white;
-            padding: 12px 30px;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            cursor: pointer;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .form-section {
+            margin-bottom: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        textarea, input, select {
             width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
         }
-        button:hover {
-            background-color: #0056b3;
+
+        textarea:focus, input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
         }
-        button:disabled {
-            background-color: #ccc;
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
             cursor: not-allowed;
+            transform: none;
         }
-        .result {
-            margin-top: 20px;
+
+        .result-section {
+            margin-top: 30px;
             padding: 20px;
-            border-radius: 5px;
+            border-radius: 8px;
             display: none;
         }
-        .accepted {
-            background-color: #d4edda;
+
+        .result-section.show {
+            display: block;
+        }
+
+        .result-accept {
+            background: #d4edda;
             border: 1px solid #c3e6cb;
             color: #155724;
         }
-        .rejected {
-            background-color: #f8d7da;
+
+        .result-flag {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+
+        .result-block {
+            background: #f8d7da;
             border: 1px solid #f5c6cb;
             color: #721c24;
         }
+
+        .result-quarantine {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .result-action {
+            font-size: 1.2em;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .result-threat {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .threat-low { background: #28a745; color: white; }
+        .threat-medium { background: #ffc107; color: #212529; }
+        .threat-high { background: #fd7e14; color: white; }
+        .threat-critical { background: #dc3545; color: white; }
+
+        .result-details {
+            margin-top: 15px;
+        }
+
+        .detail-item {
+            margin-bottom: 10px;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            margin-right: 10px;
+        }
+
         .loading {
             text-align: center;
-            color: #666;
+            padding: 20px;
+            color: #667eea;
         }
-        .error {
-            background-color: #f8d7da;
-            border: 1px solid #f5c6cb;
-            color: #721c24;
-            padding: 15px;
-            border-radius: 5px;
-            margin-top: 20px;
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
         }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .posts-table {
+            margin-top: 40px;
+        }
+
+        .posts-table h3 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #e1e8ed;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .action-badge {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .action-accept { background: #d4edda; color: #155724; }
+        .action-flag { background: #fff3cd; color: #856404; }
+        .action-block { background: #f8d7da; color: #721c24; }
+        .action-quarantine { background: #d1ecf1; color: #0c5460; }
+
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
             margin-top: 20px;
         }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 12px;
-            text-align: left;
-        }
-        th {
-            background-color: #f8f9fa;
-            font-weight: bold;
-        }
-        .status-accepted {
-            color: #28a745;
-            font-weight: bold;
-        }
-        .status-rejected {
-            color: #dc3545;
-            font-weight: bold;
-        }
-        .refresh-btn {
-            background-color: #28a745;
-            margin-bottom: 20px;
-        }
-        .content-cell {
-            max-width: 300px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🧩 Content Moderation System</h1>
-        
-        <div class="input-section">
-            <label for="content"><strong>Enter your post content:</strong></label>
-            <textarea id="content" placeholder="Type your post content here..."></textarea>
-            <button id="submitBtn" onclick="moderateContent()">🚀 Submit for Moderation</button>
+        <div class="header">
+            <h1>🧠 MARV Content Moderation Engine</h1>
+            <p>Production-ready multi-layer content moderation system</p>
         </div>
-        
-        <div id="loading" class="loading" style="display: none;">
-            <p>Moderating content...</p>
-        </div>
-        
-        <div id="result" class="result">
-            <h3>📋 Moderation Result</h3>
-            <div id="status"></div>
-            <div id="reason"></div>
-        </div>
-        
-        <div id="error" class="error" style="display: none;"></div>
-    </div>
 
-    <div class="container">
-        <h2>📊 All Moderated Posts</h2>
-        <button class="refresh-btn" onclick="loadPosts()">🔄 Refresh Posts</button>
-        <div id="postsTable"></div>
+        <div class="main-content">
+            <!-- Moderation Form -->
+            <div class="form-section">
+                <h2>Content Moderation</h2>
+                <form id="moderationForm">
+                    <div class="form-group">
+                        <label for="content">Content to Moderate:</label>
+                        <textarea 
+                            id="content" 
+                            name="content" 
+                            placeholder="Enter the content you want to moderate..."
+                            required
+                        ></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="contentType">Content Type:</label>
+                        <select id="contentType" name="contentType">
+                            <option value="text">Text</option>
+                            <option value="image">Image</option>
+                            <option value="video">Video</option>
+                            <option value="audio">Audio</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="userId">User ID (Optional):</label>
+                        <input 
+                            type="text" 
+                            id="userId" 
+                            name="userId" 
+                            placeholder="Enter user identifier..."
+                        >
+                    </div>
+
+                    <button type="submit" class="btn" id="submitBtn">
+                        🚀 Moderate Content
+                    </button>
+                </form>
+            </div>
+
+            <!-- Loading State -->
+            <div class="loading" id="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Analyzing content through multi-layer pipeline...</p>
+            </div>
+
+            <!-- Result Section -->
+            <div class="result-section" id="resultSection">
+                <div class="result-header">
+                    <div class="result-action" id="resultAction"></div>
+                    <div class="result-threat" id="resultThreat"></div>
+                </div>
+                <div class="result-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Confidence:</span>
+                        <span id="resultConfidence"></span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Processing Time:</span>
+                        <span id="resultTime"></span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Explanation:</span>
+                        <span id="resultExplanation"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Posts Table -->
+            <div class="posts-table">
+                <h3>Recent Moderation History</h3>
+                <button class="btn" onclick="loadPosts()">🔄 Refresh Posts</button>
+                <div id="postsTable"></div>
+            </div>
+        </div>
     </div>
 
     <script>
-        const API_URL = 'http://localhost:8000';
+        const API_BASE = 'http://localhost:8000/api/v1';
         
-        async function moderateContent() {
-            const content = document.getElementById('content').value.trim();
-            const submitBtn = document.getElementById('submitBtn');
-            const loading = document.getElementById('loading');
-            const result = document.getElementById('result');
-            const error = document.getElementById('error');
+        // Form submission
+        document.getElementById('moderationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
             
-            if (!content) {
-                showError('Please enter some content to moderate.');
+            const content = document.getElementById('content').value;
+            const contentType = document.getElementById('contentType').value;
+            const userId = document.getElementById('userId').value;
+            
+            if (!content.trim()) {
+                alert('Please enter content to moderate');
                 return;
             }
             
-            // Show loading state
+            await moderateContent(content, contentType, userId);
+        });
+
+        async function moderateContent(content, contentType, userId) {
+            const submitBtn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            const resultSection = document.getElementById('resultSection');
+            
+            // Show loading
             submitBtn.disabled = true;
             loading.style.display = 'block';
-            result.style.display = 'none';
-            error.style.display = 'none';
+            resultSection.classList.remove('show');
             
             try {
-                const response = await fetch(`${API_URL}/moderate`, {
+                const response = await fetch(`${API_BASE}/moderate`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ content: content })
+                    body: JSON.stringify({
+                        content: content,
+                        content_type: contentType,
+                        user_id: userId || null
+                    })
                 });
                 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 
-                const data = await response.json();
-                showResult(data);
+                const result = await response.json();
+                displayResult(result);
                 
                 // Refresh posts table
                 loadPosts();
                 
-            } catch (err) {
-                showError(`Error: ${err.message}. Make sure the backend is running on http://localhost:8000`);
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Failed to moderate content. Please try again.');
             } finally {
+                // Hide loading
                 submitBtn.disabled = false;
                 loading.style.display = 'none';
             }
         }
-        
-        function showResult(data) {
-            const result = document.getElementById('result');
-            const status = document.getElementById('status');
-            const reason = document.getElementById('reason');
+
+        function displayResult(result) {
+            const resultSection = document.getElementById('resultSection');
+            const resultAction = document.getElementById('resultAction');
+            const resultThreat = document.getElementById('resultThreat');
+            const resultConfidence = document.getElementById('resultConfidence');
+            const resultTime = document.getElementById('resultTime');
+            const resultExplanation = document.getElementById('resultExplanation');
             
-            // Set status
-            if (data.accepted) {
-                status.innerHTML = '<h2 style="color: #28a745;">✅ ACCEPTED</h2>';
-                result.className = 'result accepted';
-            } else {
-                status.innerHTML = '<h2 style="color: #dc3545;">❌ REJECTED</h2>';
-                result.className = 'result rejected';
-            }
+            // Set action
+            resultAction.textContent = result.action.toUpperCase();
             
-            // Set reason
-            reason.innerHTML = `<p><strong>Reason:</strong> ${data.reason}</p>`;
+            // Set threat level
+            resultThreat.textContent = result.threat_level.toUpperCase();
+            resultThreat.className = `result-threat threat-${result.threat_level}`;
             
-            result.style.display = 'block';
+            // Set other details
+            resultConfidence.textContent = `${(result.confidence * 100).toFixed(1)}%`;
+            resultTime.textContent = `${result.processing_time_ms}ms`;
+            resultExplanation.textContent = result.explanation;
+            
+            // Set result styling
+            resultSection.className = `result-section show result-${result.action}`;
         }
-        
-        function showError(message) {
-            const error = document.getElementById('error');
-            error.textContent = message;
-            error.style.display = 'block';
-        }
-        
+
         async function loadPosts() {
             try {
-                const response = await fetch(`${API_URL}/posts`);
+                const response = await fetch(`${API_BASE}/posts?limit=10`);
+                
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
@@ -229,17 +442,17 @@
                 const posts = await response.json();
                 displayPosts(posts);
                 
-            } catch (err) {
-                console.error('Error loading posts:', err);
-                document.getElementById('postsTable').innerHTML = '<p style="color: red;">Error loading posts</p>';
+            } catch (error) {
+                console.error('Error loading posts:', error);
+                showError('Failed to load posts.');
             }
         }
-        
+
         function displayPosts(posts) {
-            const tableDiv = document.getElementById('postsTable');
+            const postsTable = document.getElementById('postsTable');
             
             if (posts.length === 0) {
-                tableDiv.innerHTML = '<p>No posts found.</p>';
+                postsTable.innerHTML = '<p>No posts found.</p>';
                 return;
             }
             
@@ -249,45 +462,70 @@
                         <tr>
                             <th>ID</th>
                             <th>Content</th>
-                            <th>Status</th>
-                            <th>Reason</th>
-                            <th>Created At</th>
+                            <th>Action</th>
+                            <th>Threat Level</th>
+                            <th>Confidence</th>
+                            <th>Time</th>
+                            <th>Created</th>
                         </tr>
                     </thead>
                     <tbody>
             `;
             
             posts.forEach(post => {
-                const statusClass = post.accepted ? 'status-accepted' : 'status-rejected';
-                const statusText = post.accepted ? '✅ Accepted' : '❌ Rejected';
-                const date = new Date(post.created_at).toLocaleString();
+                const contentPreview = post.content.length > 50 
+                    ? post.content.substring(0, 50) + '...' 
+                    : post.content;
                 
                 tableHTML += `
                     <tr>
                         <td>${post.id}</td>
-                        <td class="content-cell" title="${post.content}">${post.content}</td>
-                        <td class="${statusClass}">${statusText}</td>
-                        <td>${post.reason}</td>
-                        <td>${date}</td>
+                        <td title="${post.content}">${contentPreview}</td>
+                        <td><span class="action-badge action-${post.action}">${post.action}</span></td>
+                        <td><span class="result-threat threat-${post.threat_level}">${post.threat_level}</span></td>
+                        <td>${(post.confidence * 100).toFixed(1)}%</td>
+                        <td>${post.processing_time_ms}ms</td>
+                        <td>${new Date(post.created_at).toLocaleString()}</td>
                     </tr>
                 `;
             });
             
             tableHTML += '</tbody></table>';
-            tableDiv.innerHTML = tableHTML;
+            postsTable.innerHTML = tableHTML;
         }
-        
+
+        function showError(message) {
+            const resultSection = document.getElementById('resultSection');
+            resultSection.innerHTML = `<div class="error">${message}</div>`;
+            resultSection.classList.add('show');
+        }
+
+        function showSuccess(message) {
+            const resultSection = document.getElementById('resultSection');
+            resultSection.innerHTML = `<div class="success">${message}</div>`;
+            resultSection.classList.add('show');
+        }
+
         // Load posts on page load
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', () => {
             loadPosts();
         });
-        
-        // Allow Enter key to submit
-        document.getElementById('content').addEventListener('keydown', function(e) {
-            if (e.ctrlKey && e.key === 'Enter') {
-                moderateContent();
+
+        // Test connection on load
+        async function testConnection() {
+            try {
+                const response = await fetch('http://localhost:8000/health');
+                if (response.ok) {
+                    console.log('✅ API connection successful');
+                } else {
+                    console.warn('⚠️ API connection failed');
+                }
+            } catch (error) {
+                console.error('❌ API connection error:', error);
             }
-        });
+        }
+
+        testConnection();
     </script>
 </body>
 </html> 
