@@ -15,7 +15,7 @@ from typing import List, Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 
-def load_keywords_from_json(file_path: str = "words.json") -> List[str]:
+def load_keywords_from_json(file_path: str = "data/external/words.json") -> List[str]:
     """
     Load keywords from JSON file
     
@@ -39,7 +39,7 @@ def load_keywords_from_json(file_path: str = "words.json") -> List[str]:
         logger.error(f"Error loading keywords: {e}")
         return ["scammer", "fraud", "hate", "violence", "spam"]
 
-def update_keywords_json(keywords: List[str], file_path: str = "words.json") -> bool:
+def update_keywords_json(keywords: List[str], file_path: str = "data/external/words.json") -> bool:
     """
     Update keywords JSON file - for Day 10 dictionary expansion
     
@@ -60,7 +60,7 @@ def update_keywords_json(keywords: List[str], file_path: str = "words.json") -> 
         logger.error(f"Error updating keywords: {e}")
         return False
 
-def add_keywords(new_keywords: List[str], file_path: str = "words.json") -> bool:
+def add_keywords(new_keywords: List[str], file_path: str = "data/external/words.json") -> bool:
     """
     Add new keywords to existing list - for Day 10 dictionary expansion
     

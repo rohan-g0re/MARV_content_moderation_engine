@@ -58,7 +58,11 @@ class GuardianModerationEngine:
     Stage 3: FinBERT AI (financial fraud detection)
     """
     
-    def __init__(self, keywords_file: str = "words.json"):
+    def __init__(self, keywords_file: str = "data/external/words.json"):
+        # Handle relative path from backend directory
+        if not Path(keywords_file).exists():
+            # Try from parent directory (when running from backend/)
+            keywords_file = f"../{keywords_file}"
         self.keywords_file = Path(keywords_file)
         self.keywords = self._load_keywords()
         

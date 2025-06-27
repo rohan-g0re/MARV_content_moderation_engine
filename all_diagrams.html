@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Moderation Engine - All Architecture Diagrams</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-number {
+            font-size: 1.8em;
+            font-weight: bold;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .diagram-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 40px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .diagram-title {
+            color: #2c3e50;
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .diagram-description {
+            color: #7f8c8d;
+            margin-bottom: 25px;
+            font-size: 1.1em;
+            line-height: 1.6;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .mermaid {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+        }
+
+        .back-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            font-size: 18px;
+        }
+
+        .back-to-top:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .stats {
+                gap: 15px;
+            }
+            
+            .diagram-container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🛡️ Content Moderation Engine</h1>
+            <p class="subtitle">Complete Architecture Diagrams Collection</p>
+            <div class="stats">
+                <div class="stat-item">
+                    <span class="stat-number">7</span>
+                    <span class="stat-label">Diagrams</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">3</span>
+                    <span class="stat-label">AI Stages</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">2736</span>
+                    <span class="stat-label">Keywords</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">100%</span>
+                    <span class="stat-label">Coverage</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Diagram 1: System Overview -->
+        <div class="diagram-container">
+            <h2 class="diagram-title">🌟 Main System Flow Overview</h2>
+            <div class="diagram-description">
+                <strong>Complete user journey</strong> from frontend input to final response. Shows the high-level flow through all system components including the 3-stage moderation pipeline, database storage, and response generation.
+            </div>
+            <div class="mermaid">
+graph TD
+    A["🌐 Frontend<br/>index.html"] --> B["📤 User Input<br/>Content Submission"]
+    B --> C["🚀 HTTP POST Request<br/>/moderate"]
+    C --> D["⚡ FastAPI Server<br/>main.py:app"]
+    
+    D --> E["🛡️ GuardianModerationEngine<br/>core/moderation.py"]
+    
+    E --> F["📋 Stage 1: Rule-Based Filter<br/>Keywords + Regex"]
+    F --> G{"🔍 Keywords Found?"}
+    G -->|Yes| H["❌ REJECT<br/>High Threat"]
+    G -->|No| I["✅ Continue to Stage 2"]
+    
+    I --> J["🤖 Stage 2: Detoxify AI<br/>Toxicity Detection"]
+    J --> K{"🧠 Toxic Content?"}
+    K -->|Yes| L["❌ REJECT<br/>Medium/High Threat"]
+    K -->|No| M["✅ Continue to Stage 3"]
+    
+    M --> N["💰 Stage 3: FinBERT AI<br/>Financial Fraud Detection"]
+    N --> O{"💸 Financial Risk?"}
+    O -->|Yes| P["❌ REJECT<br/>Medium/High Threat"]
+    O -->|No| Q["✅ ACCEPT<br/>Low Threat"]
+    
+    H --> R["💾 Save to Database<br/>SQLite"]
+    L --> R
+    P --> R
+    Q --> R
+    
+    R --> S["📊 Return Response<br/>ModerationResponse"]
+    S --> T["🔄 Update Frontend<br/>Display Result"]
+    
+    U["📁 data/external/words.json<br/>2736 Keywords"] --> F
+    V["🗄️ moderation.db<br/>SQLite Database"] --> R
+    
+    style A fill:#e1f5fe
+    style D fill:#f3e5f5
+    style E fill:#fff3e0
+    style F fill:#ffebee
+    style J fill:#e8f5e8
+    style N fill:#fff8e1
+    style R fill:#f1f8e9
+            </div>
+        </div>
+
+        <!-- Diagram 2: Engine Pipeline -->
+        <div class="diagram-container">
+            <h2 class="diagram-title">🔧 Detailed Moderation Engine Pipeline</h2>
+            <div class="diagram-description">
+                <strong>Internal engine processing</strong> showing the detailed flow through all three moderation stages with decision points, thresholds, and result generation. Each stage has specific models and confidence scoring.
+            </div>
+            <div class="mermaid">
+graph TD
+    A["🛡️ GuardianModerationEngine.moderate_content()"] --> B["📝 Input: Content String"]
+    
+    B --> C["🔴 Stage 1: Rule-Based Filter"]
+    C --> D["📚 Load Keywords from<br/>data/external/words.json"]
+    D --> E["🔍 Check Keywords<br/>Whole Word Matching"]
+    E --> F["🎯 Check Regex Patterns<br/>URLs, Emails, Phone Numbers"]
+    F --> G{"❓ Rule Violations?"}
+    
+    G -->|Yes| H["❌ Return ModerationResult<br/>accepted=False<br/>stage='rule-based'<br/>threat_level='high'<br/>confidence=1.0"]
+    
+    G -->|No| I["🟡 Stage 2: Detoxify Check"]
+    I --> J["🤖 Initialize Detoxify Model<br/>unitary/toxic-bert"]
+    J --> K["🧠 Classify Text Toxicity"]
+    K --> L["📊 Get Toxicity Score"]
+    L --> M{"🎚️ Score > threshold<br/>(0.5)?"}
+    
+    M -->|Yes| N["❌ Return ModerationResult<br/>accepted=False<br/>stage='detoxify'<br/>threat_level='medium/high'<br/>confidence=score"]
+    
+    M -->|No| O["🟢 Stage 3: FinBERT Check"]
+    O --> P["💰 Initialize FinBERT Model<br/>ProsusAI/finbert"]
+    P --> Q["📈 Analyze Financial Sentiment"]
+    Q --> R["📊 Get Sentiment Score"]
+    R --> S{"📉 Negative + High Confidence<br/>(>0.7)?"}
+    
+    S -->|Yes| T["❌ Return ModerationResult<br/>accepted=False<br/>stage='finbert'<br/>threat_level='medium/high'<br/>confidence=score"]
+    
+    S -->|No| U["✅ Return ModerationResult<br/>accepted=True<br/>stage='finbert'<br/>threat_level='low'<br/>reason='All checks passed'"]
+    
+    V["⚙️ Configuration"] --> W["🎚️ toxicity_threshold = 0.5<br/>🎚️ finbert_threshold = 0.7<br/>🎚️ llm_escalation_threshold = 3"]
+    W --> M
+    W --> S
+    
+    style C fill:#ffebee
+    style I fill:#e8f5e8
+    style O fill:#fff8e1
+    style H fill:#ffcdd2
+    style N fill:#ffcdd2
+    style T fill:#ffcdd2
+    style U fill:#c8e6c9
+            </div>
+        </div>
+
+        <!-- Diagram 3: Sequence -->
+        <div class="diagram-container">
+            <h2 class="diagram-title">🔄 Frontend-Backend Interaction Sequence</h2>
+            <div class="diagram-description">
+                <strong>Real-time communication flow</strong> between user interface and backend services. Shows the complete request-response cycle including error handling and data persistence.
+            </div>
+            <div class="mermaid">
+sequenceDiagram
+    participant User as 👤 User
+    participant Frontend as 🌐 Frontend<br/>(index.html)
+    participant API as ⚡ FastAPI Server<br/>(main.py)
+    participant Engine as 🛡️ ModerationEngine<br/>(moderation.py)
+    participant DB as 🗄️ SQLite Database<br/>(moderation.db)
+    participant Keywords as 📁 Keywords File<br/>(data/external/words.json)
+    participant AI as 🤖 AI Models<br/>(Detoxify + FinBERT)
+    
+    User->>Frontend: Enter content in textarea
+    User->>Frontend: Click "Submit for Moderation"
+    
+    Frontend->>Frontend: Validate input (not empty)
+    Frontend->>Frontend: Show loading state
+    
+    Frontend->>API: POST /moderate<br/>{"content": "user text"}
+    
+    API->>Engine: moderate_content(content)
+    
+    Engine->>Keywords: Load keywords list
+    Keywords-->>Engine: Return 2736 keywords
+    
+    Engine->>Engine: Stage 1: Rule-based check
+    
+    alt Rule violation found
+        Engine-->>API: ModerationResult(accepted=False)
+    else No rule violation
+        Engine->>AI: Stage 2: Detoxify check
+        AI-->>Engine: Toxicity score
+        
+        alt High toxicity
+            Engine-->>API: ModerationResult(accepted=False)
+        else Low toxicity
+            Engine->>AI: Stage 3: FinBERT check
+            AI-->>Engine: Financial sentiment
+            
+            alt High financial risk
+                Engine-->>API: ModerationResult(accepted=False)
+            else Low risk
+                Engine-->>API: ModerationResult(accepted=True)
+            end
+        end
+    end
+    
+    API->>DB: Save Post to database
+    DB-->>API: Return post ID
+    
+    API-->>Frontend: ModerationResponse<br/>{accepted, reason, id, etc}
+    
+    Frontend->>Frontend: Hide loading state
+    Frontend->>Frontend: Display result (accepted/rejected)
+    Frontend->>Frontend: Show reason and threat level
+    
+    Frontend->>API: GET /posts (refresh posts table)
+    API->>DB: Query all posts
+    DB-->>API: Return posts list
+    API-->>Frontend: Posts array
+    Frontend->>Frontend: Update posts table
+    
+    Note over User,AI: Complete moderation cycle<br/>with real-time feedback
+            </div>
+        </div>
+
+        <!-- Diagram 4: Database Operations -->
+        <div class="diagram-container">
+            <h2 class="diagram-title">💾 Database Operations & API Endpoints</h2>
+            <div class="diagram-description">
+                <strong>Data persistence and retrieval</strong> showing SQLite database schema, CRUD operations, and all API endpoints for statistics and administration.
+            </div>
+            <div class="mermaid">
+graph TD
+    A["🚀 FastAPI Application Startup"] --> B["🗄️ Initialize SQLite Database<br/>moderation.db"]
+    
+    B --> C["📋 Create Post Table Schema"]
+    C --> D["🏗️ Table: posts<br/>- id (Primary Key)<br/>- content (Text)<br/>- accepted (Boolean)<br/>- reason (Text)<br/>- threat_level (String)<br/>- confidence (String)<br/>- stage (String)<br/>- created_at (DateTime)"]
+    
+    E["📤 Moderation Request"] --> F["🛡️ Process Content"]
+    F --> G["📊 Get ModerationResult"]
+    G --> H["💾 Create Post Object"]
+    
+    H --> I["🔄 Database Session"]
+    I --> J["➕ Add Post to Session"]
+    J --> K["💾 Commit Transaction"]
+    K --> L["🔄 Refresh Post (get ID)"]
+    L --> M["🔐 Close Session"]
+    
+    M --> N["📈 API Endpoints"]
+    
+    N --> O["📚 GET /posts<br/>Retrieve All Posts"]
+    N --> P["📊 GET /stats<br/>Generate Statistics"] 
+    N --> Q["🏠 GET /<br/>System Status"]
+    N --> R["🏥 GET /health<br/>Health Check"]
+    
+    O --> S["🔍 Query Posts<br/>ORDER BY created_at DESC"]
+    P --> T["📈 Calculate Statistics<br/>- Total posts<br/>- Accepted/Rejected counts<br/>- Acceptance rate<br/>- Breakdown by stage<br/>- Threat level distribution"]
+    
+    S --> U["📋 Return JSON Array<br/>Posts with metadata"]
+    T --> V["📊 Return JSON Object<br/>Comprehensive stats"]
+    
+    W["🔧 Admin Endpoints"] --> X["🔄 POST /admin/reload-keywords<br/>Refresh keyword list"]
+    W --> Y["⚙️ POST /admin/update-thresholds<br/>Modify AI thresholds"]
+    
+    style B fill:#e3f2fd
+    style D fill:#f3e5f5
+    style H fill:#fff3e0
+    style I fill:#e8f5e8
+    style N fill:#fff8e1
+    style S fill:#f1f8e9
+    style T fill:#fce4ec
+            </div>
+        </div>
+
+        <!-- Diagram 5: AI Models -->
+        <div class="diagram-container">
+            <h2 class="diagram-title">🤖 AI Models Processing Pipeline</h2>
+            <div class="diagram-description">
+                <strong>Deep dive into AI model processing</strong> showing Detoxify and FinBERT model initialization, text processing, scoring mechanisms, and error handling with graceful fallbacks.
+            </div>
+            <div class="mermaid">
+graph TD
+    A["🧠 AI Models Processing Pipeline"] --> B["🤖 Model Initialization"]
+    
+    B --> C["🔴 Detoxify Model<br/>unitary/toxic-bert"]
+    B --> D["💰 FinBERT Model<br/>ProsusAI/finbert"]
+    
+    C --> E["📥 Load Transformer Model"]
+    E --> F["⚙️ Set Device to CPU"]
+    F --> G["✅ Detoxify Ready"]
+    
+    D --> H["📥 Load Financial Model"]
+    H --> I["⚙️ Set Device to CPU"] 
+    I --> J["✅ FinBERT Ready"]
+    
+    K["📝 Input Text"] --> L["🔴 Stage 2: Detoxify Processing"]
+    
+    L --> M["🧠 Text Classification"]
+    M --> N["📊 Get Prediction<br/>- Label (toxic/non-toxic)<br/>- Confidence Score (0-1)"]
+    N --> O{"🎚️ Score > 0.5?"}
+    
+    O -->|Yes| P["❌ TOXIC DETECTED<br/>threat_level = 'high/medium'<br/>confidence = score"]
+    O -->|No| Q["✅ CONTINUE TO STAGE 3"]
+    
+    Q --> R["💰 Stage 3: FinBERT Processing"]
+    R --> S["📈 Financial Sentiment Analysis"]
+    S --> T["📊 Get Sentiment<br/>- Label (positive/negative/neutral)<br/>- Confidence Score (0-1)"]
+    T --> U{"📉 Negative + Score > 0.7?"}
+    
+    U -->|Yes| V["❌ FINANCIAL RISK<br/>threat_level = 'high/medium'<br/>confidence = score"]
+    U -->|No| W["✅ ALL CHECKS PASSED<br/>threat_level = 'low'<br/>accepted = True"]
+    
+    X["⚠️ Error Handling"] --> Y["🔧 Model Loading Failures"]
+    Y --> Z["🔄 Graceful Fallback<br/>- Log warning<br/>- Skip stage<br/>- Continue pipeline"]
+    
+    AA["🎛️ Configuration"] --> BB["🎚️ Toxicity Threshold: 0.5<br/>🎚️ FinBERT Threshold: 0.7<br/>🎚️ LLM Escalation: 3 (future)"]
+    
+    BB --> O
+    BB --> U
+    
+    style C fill:#ffebee
+    style D fill:#fff8e1
+    style G fill:#c8e6c9
+    style J fill:#c8e6c9
+    style P fill:#ffcdd2
+    style V fill:#ffcdd2
+    style W fill:#c8e6c9
+    style Z fill:#fff3e0
+            </div>
+        </div>
+
+        <!-- Diagram 6: Architecture -->
+        <div class="diagram-container">
+            <h2 class="diagram-title">🏗️ Complete System Architecture</h2>
+            <div class="diagram-description">
+                <strong>High-level system components</strong> showing the layered architecture with frontend, API layer, moderation engine, utilities, data layer, and AI models with their relationships.
+            </div>
+            <div class="mermaid">
+graph TB
+    subgraph "🌐 Frontend Layer"
+        A["🖥️ index.html<br/>- Content submission form<br/>- Real-time results display<br/>- Posts history table<br/>- Statistics dashboard"]
+    end
+    
+    subgraph "⚡ API Layer (FastAPI)"
+        B["🚀 main.py"]
+        C["📋 Core Endpoints<br/>- POST /moderate<br/>- GET /posts<br/>- GET /stats<br/>- GET /health"]
+        D["🔧 Admin Endpoints<br/>- POST /admin/reload-keywords<br/>- POST /admin/update-thresholds"]
+    end
+    
+    subgraph "🛡️ Moderation Engine"
+        E["🎯 GuardianModerationEngine<br/>(core/moderation.py)"]
+        F["📋 Stage 1: Rule-Based<br/>- Keywords matching<br/>- Regex patterns<br/>- URL/Email detection"]
+        G["🤖 Stage 2: Detoxify AI<br/>- Toxicity classification<br/>- unitary/toxic-bert<br/>- Threshold: 0.5"]
+        H["💰 Stage 3: FinBERT AI<br/>- Financial sentiment<br/>- ProsusAI/finbert<br/>- Threshold: 0.7"]
+    end
+    
+    subgraph "🔧 Utilities & Helpers"
+        I["⚙️ helpers.py<br/>- Keyword loading<br/>- Database operations<br/>- Export functions"]
+    end
+    
+    subgraph "💾 Data Layer"
+        J["📁 data/external/words.json<br/>2736 Keywords"]
+        K["🗄️ moderation.db<br/>SQLite Database<br/>- Posts table<br/>- Metadata storage"]
+    end
+    
+    subgraph "🤖 AI Models"
+        L["🧠 Detoxify Model<br/>Text Classification<br/>CPU Processing"]
+        M["📈 FinBERT Model<br/>Financial Analysis<br/>CPU Processing"]
+    end
+    
+    subgraph "🔄 Request Flow"
+        N["1️⃣ User Input"] --> O["2️⃣ HTTP Request"]
+        O --> P["3️⃣ Moderation Pipeline"]
+        P --> Q["4️⃣ Database Storage"]
+        Q --> R["5️⃣ Response Generation"]
+        R --> S["6️⃣ Frontend Update"]
+    end
+    
+    A -.-> B
+    B --> C
+    B --> D
+    C --> E
+    E --> F
+    F --> G
+    G --> H
+    E --> I
+    I --> J
+    E --> K
+    G --> L
+    H --> M
+    
+    style A fill:#e1f5fe
+    style E fill:#fff3e0
+    style F fill:#ffebee
+    style G fill:#e8f5e8
+    style H fill:#fff8e1
+    style J fill:#f3e5f5
+    style K fill:#e3f2fd
+    style L fill:#e8f5e8
+    style M fill:#fff8e1
+            </div>
+        </div>
+
+        <!-- Diagram 7: Data Flow -->
+        <div class="diagram-container">
+            <h2 class="diagram-title">📊 Comprehensive End-to-End Data Flow</h2>
+            <div class="diagram-description">
+                <strong>Complete process visualization</strong> from user input to final result, showing every step, decision point, validation, and data transformation in the moderation pipeline.
+            </div>
+            <div class="mermaid">
+flowchart TD
+    Start([👤 User starts content moderation]) --> Input["📝 Enter content in frontend form<br/>(index.html)"]
+    
+    Input --> Validate{"🔍 Frontend Validation<br/>Content not empty?"}
+    Validate -->|No| Error1["❌ Show error message"]
+    Validate -->|Yes| Submit["📤 Submit POST /moderate request"]
+    
+    Submit --> Server["⚡ FastAPI receives request<br/>(main.py)"]
+    Server --> InitEngine["🛡️ Initialize GuardianModerationEngine"]
+    
+    InitEngine --> LoadKeywords["📚 Load keywords from<br/>data/external/words.json<br/>(2736 keywords)"]
+    LoadKeywords --> LoadModels["🤖 Load AI models<br/>Detoxify + FinBERT"]
+    
+    LoadModels --> Stage1["📋 STAGE 1: Rule-Based Filter"]
+    Stage1 --> CheckKeywords["🔍 Check for banned keywords<br/>Whole word matching"]
+    CheckKeywords --> CheckRegex["🎯 Check regex patterns<br/>URLs, emails, phones, threats"]
+    
+    CheckRegex --> Rule1{"❓ Rule violations found?"}
+    Rule1 -->|Yes| Reject1["❌ REJECT<br/>Reason: Rule-based<br/>Threat: High<br/>Confidence: 1.0"]
+    Rule1 -->|No| Stage2["🤖 STAGE 2: Detoxify Check"]
+    
+    Stage2 --> Detoxify["🧠 Process with toxic-bert model"]
+    Detoxify --> ToxicScore["📊 Get toxicity score (0-1)"]
+    ToxicScore --> Toxic1{"🎚️ Score > 0.5 threshold?"}
+    
+    Toxic1 -->|Yes| Reject2["❌ REJECT<br/>Reason: Toxic content<br/>Threat: Medium/High<br/>Confidence: Score"]
+    Toxic1 -->|No| Stage3["💰 STAGE 3: FinBERT Check"]
+    
+    Stage3 --> FinBERT["📈 Process with FinBERT model"]
+    FinBERT --> FinScore["📊 Get financial sentiment"]
+    FinScore --> Fin1{"📉 Negative + Score > 0.7?"}
+    
+    Fin1 -->|Yes| Reject3["❌ REJECT<br/>Reason: Financial risk<br/>Threat: Medium/High<br/>Confidence: Score"]
+    Fin1 -->|No| Accept["✅ ACCEPT<br/>Reason: All checks passed<br/>Threat: Low<br/>Stage: finbert"]
+    
+    Reject1 --> SaveDB["💾 Save to moderation.db"]
+    Reject2 --> SaveDB
+    Reject3 --> SaveDB
+    Accept --> SaveDB
+    
+    SaveDB --> CreatePost["🏗️ Create Post record<br/>with all metadata"]
+    CreatePost --> GetID["🆔 Get assigned post ID"]
+    GetID --> Response["📊 Create ModerationResponse<br/>JSON with result details"]
+    
+    Response --> Frontend["🌐 Send response to frontend"]
+    Frontend --> Display["📺 Display result to user<br/>Green for accept, Red for reject"]
+    Display --> RefreshPosts["🔄 Refresh posts table<br/>GET /posts endpoint"]
+    
+    RefreshPosts --> ShowStats["📈 Update statistics<br/>GET /stats endpoint"]
+    ShowStats --> End([✅ Process complete])
+    
+    Error1 --> End
+    
+    style Input fill:#e1f5fe
+    style Stage1 fill:#ffebee
+    style Stage2 fill:#e8f5e8
+    style Stage3 fill:#fff8e1
+    style Reject1 fill:#ffcdd2
+    style Reject2 fill:#ffcdd2
+    style Reject3 fill:#ffcdd2
+    style Accept fill:#c8e6c9
+    style SaveDB fill:#e3f2fd
+    style Display fill:#f1f8e9
+            </div>
+        </div>
+    </div>
+
+    <button class="back-to-top" onclick="scrollToTop()">⬆️</button>
+
+    <script>
+        // Initialize Mermaid
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true
+            }
+        });
+
+        // Back to top functionality
+        window.addEventListener('scroll', function() {
+            const backToTop = document.querySelector('.back-to-top');
+            if (window.pageYOffset > 300) {
+                backToTop.style.display = 'block';
+            } else {
+                backToTop.style.display = 'none';
+            }
+        });
+
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        console.log('🎉 Content Moderation Engine - All Diagrams Loaded!');
+        console.log('📊 7 diagrams displayed vertically');
+        console.log('🔄 Scroll to view all diagrams');
+    </script>
+</body>
+</html> 
