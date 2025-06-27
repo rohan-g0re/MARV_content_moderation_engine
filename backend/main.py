@@ -2,11 +2,12 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 import datetime
 import os
 import logging
+import socket
+import sys
 
 # Import the consolidated moderation engine
 from app.core.moderation import GuardianModerationEngine, ModerationResult
@@ -14,6 +15,24 @@ from app.core.moderation import GuardianModerationEngine, ModerationResult
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+def is_port_available(host, port):
+    """Check if a port is available for binding"""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            s.bind((host, port))
+            return True
+    except OSError as e:
+        logger.error(f"Port {port} is not available: {e}")
+        return False
+
+def find_available_port(host, start_port, max_port=9000):
+    """Find an available port starting from start_port"""
+    for port in range(start_port, max_port + 1):
+        if is_port_available(host, port):
+            return port
+    return None
 
 # Initialize FastAPI
 app = FastAPI(
@@ -229,5 +248,30 @@ def update_thresholds(
 
 if __name__ == "__main__":
     import uvicorn
+    
+    # Server configuration
+    host = "0.0.0.0"
+    preferred_port = 8000
+    
     logger.info("Starting GuardianAI Content Moderation API...")
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    
+    # Check if preferred port is available
+    if is_port_available(host, preferred_port):
+        port = preferred_port
+        logger.info(f"✅ Port {port} is available, starting server...")
+    else:
+        # Find an alternative port
+        port = find_available_port(host, preferred_port + 1)
+        if port:
+            logger.warning(f"⚠️  Port {preferred_port} is busy, using alternative port {port}")
+        else:
+            logger.error(f"❌ No available ports found between {preferred_port+1} and 9000")
+            sys.exit(1)
+    
+    try:
+        logger.info(f"🚀 GuardianAI API will be available at: http://localhost:{port}")
+        logger.info(f"📊 API Documentation: http://localhost:{port}/docs")
+        uvicorn.run(app, host=host, port=port, reload=False)
+    except Exception as e:
+        logger.error(f"❌ Failed to start server: {e}")
+        sys.exit(1) 
