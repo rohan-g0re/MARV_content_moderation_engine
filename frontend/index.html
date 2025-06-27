@@ -114,6 +114,84 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
+        
+        /* Band and Action Styling */
+        .band-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+            color: white;
+            display: inline-block;
+            min-width: 80px;
+        }
+        
+        .band-safe { background-color: #28a745; }
+        .band-flag-low { background-color: #ffc107; color: #000; }
+        .band-flag-medium { background-color: #fd7e14; }
+        .band-flag-high { background-color: #dc3545; }
+        .band-block { background-color: #6f42c1; }
+        
+        .action-badge {
+            padding: 3px 6px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: bold;
+            text-align: center;
+            display: inline-block;
+            min-width: 60px;
+        }
+        
+        .action-pass { background-color: #d4edda; color: #155724; }
+        .action-flag { background-color: #fff3cd; color: #856404; }
+        .action-block { background-color: #f8d7da; color: #721c24; }
+        
+        .confidence-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+        
+        .confidence-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+            font-weight: bold;
+            color: #000;
+        }
+        
+        .result-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .detail-item {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        .detail-label {
+            font-size: 12px;
+            color: #6c757d;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body>
@@ -134,6 +212,30 @@
             <h3>📋 Moderation Result</h3>
             <div id="status"></div>
             <div id="reason"></div>
+            
+            <div class="result-details">
+                <div class="detail-item">
+                    <div class="detail-label">Financial Risk Band</div>
+                    <div id="band"></div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Action</div>
+                    <div id="action"></div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Confidence Score</div>
+                    <div id="confidence">
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" id="confidenceFill"></div>
+                            <div class="confidence-text" id="confidenceText">0%</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Processing Stage</div>
+                    <div id="stage"></div>
+                </div>
+            </div>
         </div>
         
         <div id="error" class="error" style="display: none;"></div>
@@ -197,6 +299,11 @@
             const result = document.getElementById('result');
             const status = document.getElementById('status');
             const reason = document.getElementById('reason');
+            const band = document.getElementById('band');
+            const action = document.getElementById('action');
+            const confidenceFill = document.getElementById('confidenceFill');
+            const confidenceText = document.getElementById('confidenceText');
+            const stage = document.getElementById('stage');
             
             // Set status
             if (data.accepted) {
@@ -210,7 +317,49 @@
             // Set reason
             reason.innerHTML = `<p><strong>Reason:</strong> ${data.reason}</p>`;
             
+            // Set band with color coding
+            const bandClass = getBandClass(data.band);
+            band.innerHTML = `<span class="band-badge ${bandClass}">${data.band}</span>`;
+            
+            // Set action with appropriate styling
+            const actionClass = getActionClass(data.action);
+            action.innerHTML = `<span class="action-badge ${actionClass}">${data.action}</span>`;
+            
+            // Set confidence score with visual bar
+            const confidencePercent = Math.round(data.confidence * 100);
+            confidenceFill.style.width = `${confidencePercent}%`;
+            confidenceFill.style.backgroundColor = getConfidenceColor(data.confidence);
+            confidenceText.textContent = `${confidencePercent}%`;
+            
+            // Set processing stage
+            stage.innerHTML = `<strong>${data.stage.toUpperCase()}</strong>`;
+            
             result.style.display = 'block';
+        }
+        
+        function getBandClass(band) {
+            const bandClasses = {
+                'SAFE': 'band-safe',
+                'FLAG_LOW': 'band-flag-low',
+                'FLAG_MEDIUM': 'band-flag-medium',
+                'FLAG_HIGH': 'band-flag-high',
+                'BLOCK': 'band-block'
+            };
+            return bandClasses[band] || 'band-safe';
+        }
+        
+        function getActionClass(action) {
+            if (action === 'PASS') return 'action-pass';
+            if (action === 'BLOCK') return 'action-block';
+            return 'action-flag'; // For FLAG_LOW, FLAG_MEDIUM, FLAG_HIGH
+        }
+        
+        function getConfidenceColor(confidence) {
+            if (confidence < 0.2) return '#28a745'; // Green
+            if (confidence < 0.4) return '#ffc107'; // Yellow
+            if (confidence < 0.6) return '#fd7e14'; // Orange
+            if (confidence < 0.8) return '#dc3545'; // Red
+            return '#6f42c1'; // Purple for very high confidence
         }
         
         function showError(message) {
@@ -250,6 +399,9 @@
                             <th>ID</th>
                             <th>Content</th>
                             <th>Status</th>
+                            <th>Band</th>
+                            <th>Action</th>
+                            <th>Confidence</th>
                             <th>Reason</th>
                             <th>Created At</th>
                         </tr>
@@ -262,11 +414,23 @@
                 const statusText = post.accepted ? '✅ Accepted' : '❌ Rejected';
                 const date = new Date(post.created_at).toLocaleString();
                 
+                // Get band and action with fallbacks for older entries
+                const band = post.band || 'SAFE';
+                const action = post.action || 'PASS';
+                const confidence = post.confidence || 1.0;
+                
+                const bandClass = getBandClass(band);
+                const actionClass = getActionClass(action);
+                const confidencePercent = Math.round(confidence * 100);
+                
                 tableHTML += `
                     <tr>
                         <td>${post.id}</td>
                         <td class="content-cell" title="${post.content}">${post.content}</td>
                         <td class="${statusClass}">${statusText}</td>
+                        <td><span class="band-badge ${bandClass}">${band}</span></td>
+                        <td><span class="action-badge ${actionClass}">${action}</span></td>
+                        <td style="text-align: center; font-weight: bold;">${confidencePercent}%</td>
                         <td>${post.reason}</td>
                         <td>${date}</td>
                     </tr>
