@@ -67,6 +67,8 @@ class Post(Base):
     threat_level = Column(String, default="low")
     confidence = Column(String, default="1.0")
     stage = Column(String, default="unknown")
+    band = Column(String, default="SAFE")
+    action = Column(String, default="PASS")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 # Create tables
@@ -83,7 +85,8 @@ class ModerationResponse(BaseModel):
     threat_level: str = "low"
     confidence: float = 1.0
     stage: str = "unknown"
-    action: str = "unknown"
+    band: str = "SAFE"
+    action: str = "PASS"
     explanation: str = ""
 
 # Initialize the consolidated moderation engine
@@ -129,7 +132,9 @@ def moderate_post(request: ModerationRequest):
             reason=result.reason,
             threat_level=result.threat_level,
             confidence=str(result.confidence),
-            stage=result.stage
+            stage=result.stage,
+            band=result.band,
+            action=result.action
         )
         db.add(post)
         db.commit()
@@ -144,6 +149,7 @@ def moderate_post(request: ModerationRequest):
             threat_level=result.threat_level,
             confidence=result.confidence,
             stage=result.stage,
+            band=result.band,
             action=result.action,
             explanation=result.explanation
         )
@@ -169,6 +175,8 @@ def get_posts():
                 "threat_level": post.threat_level,
                 "confidence": float(post.confidence) if post.confidence else 1.0,
                 "stage": post.stage,
+                "band": getattr(post, 'band', 'SAFE'),
+                "action": getattr(post, 'action', 'PASS'),
                 "created_at": post.created_at.isoformat()
             }
             for post in posts

@@ -27,13 +27,15 @@ class ModerationResult:
     """Structured moderation result for Day 5 deliverable"""
     
     def __init__(self, accepted: bool, reason: str, threat_level: str = "low", 
-                 confidence: float = 1.0, stage: str = "unknown"):
+                 confidence: float = 1.0, stage: str = "unknown", 
+                 band: str = "SAFE", action: str = "PASS"):
         self.accepted = accepted
         self.reason = reason
         self.threat_level = threat_level  # low, medium, high
         self.confidence = confidence      # 0.0 - 1.0
         self.stage = stage               # rule-based, detoxify, finbert
-        self.action = "accept" if accepted else "block"
+        self.band = band                 # SAFE, FLAG_LOW, FLAG_MEDIUM, FLAG_HIGH, BLOCK
+        self.action = action             # PASS, FLAG_LOW, FLAG_MEDIUM, FLAG_HIGH, BLOCK
         self.explanation = f"Content {'approved' if accepted else 'rejected'} at {stage} stage: {reason}"
 
     def to_dict(self) -> Dict:
@@ -44,6 +46,7 @@ class ModerationResult:
             "threat_level": self.threat_level,
             "confidence": self.confidence,
             "stage": self.stage,
+            "band": self.band,
             "action": self.action,
             "explanation": self.explanation
         }
@@ -75,6 +78,15 @@ class GuardianModerationEngine:
         self.toxicity_threshold = 0.5
         self.finbert_threshold = 0.7
         self.llm_escalation_threshold = 3  # For future LLM integration
+        
+        # FinBERT 5-layer band system for financial companies
+        self.finbert_bands = {
+            "SAFE": {"min": 0.0, "max": 0.2, "action": "PASS", "threat_level": "low"},
+            "FLAG_LOW": {"min": 0.2, "max": 0.4, "action": "FLAG_LOW", "threat_level": "low"},
+            "FLAG_MEDIUM": {"min": 0.4, "max": 0.6, "action": "FLAG_MEDIUM", "threat_level": "medium"},
+            "FLAG_HIGH": {"min": 0.6, "max": 0.8, "action": "FLAG_HIGH", "threat_level": "high"},
+            "BLOCK": {"min": 0.8, "max": 1.0, "action": "BLOCK", "threat_level": "high"}
+        }
         
         logger.info(f"GuardianAI initialized with {len(self.keywords)} keywords")
 
@@ -111,6 +123,24 @@ class GuardianModerationEngine:
             logger.warning(f"FinBERT model loading failed: {e}")
             self.finbert_classifier = None
 
+    def _get_finbert_band(self, confidence: float, sentiment: str) -> Tuple[str, str, str]:
+        """
+        Determine FinBERT band based on confidence score for negative sentiment
+        
+        Returns: (band_name, action, threat_level)
+        """
+        # Only apply banding for negative sentiment (potential financial fraud)
+        if sentiment != 'negative':
+            return "SAFE", "PASS", "low"
+        
+        # Find the appropriate band for the confidence score
+        for band_name, band_config in self.finbert_bands.items():
+            if band_config["min"] <= confidence <= band_config["max"]:
+                return band_name, band_config["action"], band_config["threat_level"]
+        
+        # Fallback to SAFE if no band matches (shouldn't happen)
+        return "SAFE", "PASS", "low"
+
     def stage1_rule_based_filter(self, text: str) -> ModerationResult:
         """
         Stage 1: Rule-based filtering using keywords and regex patterns
@@ -127,7 +157,9 @@ class GuardianModerationEngine:
                     reason=f"Rule-based: {keyword}",
                     threat_level="high",
                     confidence=1.0,
-                    stage="rule-based"
+                    stage="rule-based",
+                    band="BLOCK",
+                    action="BLOCK"
                 )
         
         # Check regex patterns
@@ -145,7 +177,9 @@ class GuardianModerationEngine:
                     reason=f"Rule-based: {description}",
                     threat_level="medium",
                     confidence=0.9,
-                    stage="rule-based"
+                    stage="rule-based",
+                    band="BLOCK",
+                    action="BLOCK"
                 )
         
         # Stage 1 passed
@@ -154,7 +188,9 @@ class GuardianModerationEngine:
             reason="Stage 1 passed",
             threat_level="low",
             confidence=1.0,
-            stage="rule-based"
+            stage="rule-based",
+            band="SAFE",
+            action="PASS"
         )
 
     def stage2_detoxify_check(self, text: str) -> ModerationResult:
@@ -170,7 +206,9 @@ class GuardianModerationEngine:
                 reason="Stage 2 skipped (model unavailable)",
                 threat_level="low",
                 confidence=0.5,
-                stage="detoxify"
+                stage="detoxify",
+                band="SAFE",
+                action="PASS"
             )
         
         try:
@@ -186,7 +224,9 @@ class GuardianModerationEngine:
                     reason=f"Toxic content detected (score: {score:.3f})",
                     threat_level=threat_level,
                     confidence=score,
-                    stage="detoxify"
+                    stage="detoxify",
+                    band="BLOCK",
+                    action="BLOCK"
                 )
             
             # Stage 2 passed
@@ -195,7 +235,9 @@ class GuardianModerationEngine:
                 reason="Stage 2 passed",
                 threat_level="low",
                 confidence=1.0 - score,
-                stage="detoxify"
+                stage="detoxify",
+                band="SAFE",
+                action="PASS"
             )
             
         except Exception as e:
@@ -205,14 +247,16 @@ class GuardianModerationEngine:
                 reason="Stage 2 error (fallback to accept)",
                 threat_level="low",
                 confidence=0.5,
-                stage="detoxify"
+                stage="detoxify",
+                band="SAFE",
+                action="PASS"
             )
 
     def stage3_finbert_check(self, text: str) -> ModerationResult:
         """
-        Stage 3: FinBERT financial fraud detection
+        Stage 3: FinBERT financial fraud detection with 5-layer band system
         
-        Returns ModerationResult with financial risk assessment
+        Returns ModerationResult with detailed financial risk assessment
         """
         if self.finbert_classifier is None:
             logger.warning("FinBERT model not available, skipping stage 3")
@@ -221,7 +265,9 @@ class GuardianModerationEngine:
                 reason="Stage 3 skipped (model unavailable)",
                 threat_level="low",
                 confidence=0.5,
-                stage="finbert"
+                stage="finbert",
+                band="SAFE",
+                action="PASS"
             )
         
         try:
@@ -229,24 +275,28 @@ class GuardianModerationEngine:
             sentiment = result[0]['label']
             confidence = result[0]['score']
             
-            # Check for potential financial fraud (negative sentiment with high confidence)
-            if sentiment == 'negative' and confidence > self.finbert_threshold:
-                threat_level = "high" if confidence > 0.9 else "medium"
-                return ModerationResult(
-                    accepted=False,
-                    reason=f"Potential financial fraud detected (confidence: {confidence:.3f})",
-                    threat_level=threat_level,
-                    confidence=confidence,
-                    stage="finbert"
-                )
+            # Get band classification for negative sentiment
+            band, action, threat_level = self._get_finbert_band(confidence, sentiment)
             
-            # Stage 3 passed
+            # Only block content in the highest risk band (BLOCK)
+            accepted = action != "BLOCK"
+            
+            # Create detailed reason based on band
+            if sentiment == 'negative':
+                reason = f"Financial content - Band: {band} (confidence: {confidence:.3f})"
+            else:
+                reason = f"Non-financial content (sentiment: {sentiment}, confidence: {confidence:.3f})"
+            
+            logger.info(f"FinBERT assessment: {sentiment} sentiment, confidence: {confidence:.3f}, band: {band}, action: {action}")
+            
             return ModerationResult(
-                accepted=True,
-                reason="All checks passed",
-                threat_level="low",
-                confidence=1.0 - confidence if sentiment == 'negative' else 1.0,
-                stage="finbert"
+                accepted=accepted,
+                reason=reason,
+                threat_level=threat_level,
+                confidence=confidence,
+                stage="finbert",
+                band=band,
+                action=action
             )
             
         except Exception as e:
@@ -256,7 +306,9 @@ class GuardianModerationEngine:
                 reason="Stage 3 error (fallback to accept)",
                 threat_level="low",
                 confidence=0.5,
-                stage="finbert"
+                stage="finbert",
+                band="SAFE",
+                action="PASS"
             )
 
     def moderate_content(self, content: str) -> ModerationResult:
