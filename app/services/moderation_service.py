@@ -218,7 +218,7 @@ class ModerationService:
         }
     
     def _calculate_threat_level(self, rule_result: LayerResult, ml_result: LayerResult, llm_result: Optional[LayerResult]) -> ThreatLevel:
-        """Calculate overall threat level"""
+        """Calculate overall threat level with enhanced financial fraud detection"""
         
         # Base threat from rule severity
         rule_threat = min(rule_result.score / 10.0, 1.0)
@@ -229,23 +229,72 @@ class ModerationService:
         # LLM threat (if available)
         llm_threat = llm_result.score if llm_result else 0.0
         
-        # Combine threats (weighted average)
-        if llm_result:
-            # With LLM: 30% rule, 30% ML, 40% LLM
-            overall_threat = (0.3 * rule_threat + 0.3 * ml_threat + 0.4 * llm_threat)
-        else:
-            # Without LLM: 50% rule, 50% ML
-            overall_threat = (0.5 * rule_threat + 0.5 * ml_threat)
+        # Enhanced financial fraud detection
+        financial_fraud_boost = self._detect_financial_fraud(rule_result, ml_result)
         
-        # Determine threat level
-        if overall_threat >= 0.8:
+        # Combine threats with financial fraud boost
+        if llm_result:
+            # With LLM: 25% rule, 25% ML, 35% LLM, 15% financial fraud boost
+            overall_threat = (0.25 * rule_threat + 0.25 * ml_threat + 0.35 * llm_threat + 0.15 * financial_fraud_boost)
+        else:
+            # Without LLM: 40% rule, 40% ML, 20% financial fraud boost
+            overall_threat = (0.4 * rule_threat + 0.4 * ml_threat + 0.2 * financial_fraud_boost)
+        
+        # Apply financial fraud multiplier if significant fraud detected
+        if financial_fraud_boost > 0.5:
+            overall_threat = min(overall_threat * settings.FINANCIAL_FRAUD_MULTIPLIER, 1.0)
+        
+        # Determine threat level with adjusted thresholds
+        if overall_threat >= 0.7:  # Lowered from 0.8
             return ThreatLevel.CRITICAL
-        elif overall_threat >= 0.6:
+        elif overall_threat >= 0.5:  # Lowered from 0.6
             return ThreatLevel.HIGH
-        elif overall_threat >= 0.4:
+        elif overall_threat >= 0.3:  # Lowered from 0.4
             return ThreatLevel.MEDIUM
         else:
             return ThreatLevel.LOW
+    
+    def _detect_financial_fraud(self, rule_result: LayerResult, ml_result: LayerResult) -> float:
+        """Detect financial fraud patterns and return boost score"""
+        fraud_score = 0.0
+        
+        # Check rule matches for financial fraud patterns
+        if rule_result.matches:
+            for match in rule_result.matches:
+                category = match.get("category", "").lower()
+                severity = match.get("severity", 0)
+                
+                # Financial fraud patterns
+                if "financial_fraud" in category:
+                    fraud_score += severity / 10.0
+                elif "fraud" in category:
+                    fraud_score += severity / 10.0 * 0.8
+                elif "scam" in category:
+                    fraud_score += severity / 10.0 * 0.7
+                
+                # Check for specific high-risk patterns
+                pattern = match.get("pattern", "").lower()
+                if any(keyword in pattern for keyword in ["guarantee", "insider", "parabolic", "10x", "20x", "moon", "explode"]):
+                    fraud_score += 0.3
+        
+        # Check ML fraud score
+        ml_fraud = ml_result.metadata.get("fraud_score", 0)
+        if ml_fraud > settings.FRAUD_THRESHOLD:
+            fraud_score += ml_fraud * 0.5
+        
+        # Check for pump-and-dump language patterns
+        pump_dump_keywords = ["guarantee", "insider", "parabolic", "pump", "dump", "moon", "rocket", "explode", "breakthrough"]
+        content_lower = rule_result.metadata.get("content", "").lower()
+        pump_dump_count = sum(1 for keyword in pump_dump_keywords if keyword in content_lower)
+        
+        if pump_dump_count >= 3:
+            fraud_score += 0.4
+        elif pump_dump_count >= 2:
+            fraud_score += 0.2
+        elif pump_dump_count >= 1:
+            fraud_score += 0.1
+        
+        return min(fraud_score, 1.0)
     
     def _determine_action(self, threat_level: ThreatLevel, rule_result: LayerResult, ml_result: LayerResult, llm_result: Optional[LayerResult]) -> ModerationAction:
         """Determine moderation action based on threat level and layer results"""
@@ -276,25 +325,57 @@ class ModerationService:
         return confidence
     
     def _generate_explanation(self, rule_result: LayerResult, ml_result: LayerResult, llm_result: Optional[LayerResult], threat_level: ThreatLevel, action: ModerationAction) -> str:
-        """Generate human-readable explanation"""
+        """Generate human-readable explanation with enhanced financial fraud details"""
         
         explanations = []
         
-        # Rule-based explanations
+        # Rule-based explanations with specific details
         if rule_result.matches:
-            match_types = set(match.get("type", "unknown") for match in rule_result.matches)
-            explanations.append(f"Rule violations detected: {', '.join(match_types)}")
+            # Group matches by category
+            categories = {}
+            for match in rule_result.matches:
+                category = match.get("category", "unknown")
+                if category not in categories:
+                    categories[category] = []
+                categories[category].append(match)
+            
+            # Generate specific explanations for each category
+            for category, matches in categories.items():
+                if category == "financial_fraud":
+                    fraud_patterns = [m.get("pattern", "") for m in matches]
+                    explanations.append(f"Financial fraud detected: {', '.join(fraud_patterns[:3])}")
+                elif category == "profanity":
+                    explanations.append(f"Profanity detected: {len(matches)} violations")
+                elif category == "threat":
+                    explanations.append(f"Threats detected: {len(matches)} violations")
+                elif category == "fraud":
+                    explanations.append(f"Fraud patterns detected: {len(matches)} violations")
+                else:
+                    explanations.append(f"{category.title()} violations: {len(matches)} detected")
         
-        # ML explanations
-        if ml_result.metadata.get("toxicity_score", 0) > settings.TOXICITY_THRESHOLD:
-            explanations.append(f"Toxicity detected: {ml_result.metadata['toxicity_score']:.2f}")
+        # ML explanations with specific scores
+        toxicity_score = ml_result.metadata.get("toxicity_score", 0)
+        fraud_score = ml_result.metadata.get("fraud_score", 0)
         
-        if ml_result.metadata.get("fraud_score", 0) > settings.FRAUD_THRESHOLD:
-            explanations.append(f"Fraud risk detected: {ml_result.metadata['fraud_score']:.2f}")
+        if toxicity_score > settings.TOXICITY_THRESHOLD:
+            explanations.append(f"Toxicity score: {toxicity_score:.2f} (threshold: {settings.TOXICITY_THRESHOLD})")
+        
+        if fraud_score > settings.FRAUD_THRESHOLD:
+            explanations.append(f"Fraud risk score: {fraud_score:.2f} (threshold: {settings.FRAUD_THRESHOLD})")
+        
+        # Financial fraud specific detection
+        financial_fraud_boost = self._detect_financial_fraud(rule_result, ml_result)
+        if financial_fraud_boost > 0.3:
+            explanations.append(f"Financial fraud indicators detected (boost: {financial_fraud_boost:.2f})")
         
         # LLM explanations
         if llm_result and llm_result.matches:
-            explanations.append(f"AI analysis: {llm_result.matches[0] if llm_result.matches else 'Complex content detected'}")
+            llm_reasoning = llm_result.matches[0] if llm_result.matches else "Complex content analysis"
+            explanations.append(f"AI analysis: {llm_reasoning}")
+        
+        # Threat level explanation
+        if threat_level in [ThreatLevel.HIGH, ThreatLevel.CRITICAL]:
+            explanations.append(f"High threat level: {threat_level.value}")
         
         # Default explanation if no issues found
         if not explanations:

@@ -33,9 +33,10 @@ class Settings:
         self.LLM_THRESHOLD = float(os.getenv("LLM_THRESHOLD", "0.6"))
         
         # Moderation Configuration
-        self.TOXICITY_THRESHOLD = float(os.getenv("TOXICITY_THRESHOLD", "0.5"))
-        self.FRAUD_THRESHOLD = float(os.getenv("FRAUD_THRESHOLD", "0.7"))
-        self.RULE_SEVERITY_THRESHOLD = int(os.getenv("RULE_SEVERITY_THRESHOLD", "5"))
+        self.TOXICITY_THRESHOLD = float(os.getenv("TOXICITY_THRESHOLD", "0.4"))
+        self.FRAUD_THRESHOLD = float(os.getenv("FRAUD_THRESHOLD", "0.3"))
+        self.RULE_SEVERITY_THRESHOLD = int(os.getenv("RULE_SEVERITY_THRESHOLD", "3"))
+        self.FINANCIAL_FRAUD_MULTIPLIER = float(os.getenv("FINANCIAL_FRAUD_MULTIPLIER", "2.0"))
         
         # Rate Limiting
         self.RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_PER_MINUTE", "100"))
