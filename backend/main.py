@@ -1,63 +1,37 @@
+import os
+import datetime
+import logging
+import socket
+import sys
+import pathlib
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Text
 from sqlalchemy.orm import declarative_base, sessionmaker
-import datetime
-import os
-import logging
-import socket
-import sys
+import requests
 
-# Import the consolidated moderation engine
-from app.core.moderation import GuardianModerationEngine, ModerationResult
+from dotenv import load_dotenv
 
-# Configure logging
+# Load .env
+BASE_DIR = pathlib.Path(__file__).resolve().parent.parent
+dotenv_path = BASE_DIR / ".env"
+print(f"Loading .env from: {dotenv_path}")
+load_dotenv(dotenv_path)
+print("DEBUG: GROQ_API_KEY is:", os.getenv("GROQ_API_KEY"))
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def is_port_available(host, port):
-    """Check if a port is available for binding"""
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            s.bind((host, port))
-            return True
-    except OSError as e:
-        logger.error(f"Port {port} is not available: {e}")
-        return False
+# ---- Import your moderation engine! ----
+from app.core.moderation import GuardianModerationEngine
 
-def find_available_port(host, start_port, max_port=9000):
-    """Find an available port starting from start_port"""
-    for port in range(start_port, max_port + 1):
-        if is_port_available(host, port):
-            return port
-    return None
-
-# Initialize FastAPI
-app = FastAPI(
-    title="GuardianAI Content Moderation API", 
-    version="2.0.0",
-    description="Consolidated three-stage content moderation pipeline"
-)
-
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Database setup
 DATABASE_URL = "sqlite:///./moderation.db"
-logger.info(f"Using database at: {os.path.abspath('moderation.db')}")
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Database model
 class Post(Base):
     __tablename__ = "posts"
     id = Column(Integer, primary_key=True, index=True)
@@ -70,11 +44,25 @@ class Post(Base):
     band = Column(String, default="SAFE")
     action = Column(String, default="PASS")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    llm_explanation = Column(Text, default="")
+    llm_troublesome_words = Column(Text, default="")
+    llm_suggestion = Column(Text, default="")
 
-# Create tables
 Base.metadata.create_all(bind=engine)
 
-# Pydantic models
+app = FastAPI(
+    title="GuardianAI Content Moderation API",
+    version="2.0.0",
+    description="Multilayered moderation pipeline with LLM escalation"
+)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 class ModerationRequest(BaseModel):
     content: str
 
@@ -88,18 +76,99 @@ class ModerationResponse(BaseModel):
     band: str = "SAFE"
     action: str = "PASS"
     explanation: str = ""
+    troublesome_words: list = []
+    suggestion: str = ""
 
-# Initialize the consolidated moderation engine
-logger.info("Initializing GuardianAI Moderation Engine...")
+# ---- Real moderation engine ----
 moderation_engine = GuardianModerationEngine()
 
-# API endpoints
+# ---- LLM Utility ----
+def get_llm_explanation_and_suggestion(post_text):
+    prompt = f"""
+A user's social media post was flagged as inappropriate.
+
+Post:
+{post_text}
+
+Instructions:
+
+1. Briefly explain, in plain language (1-2 sentences), why the post may be considered inappropriate. Do NOT mention algorithms, models, scores, or moderation systems.
+2. Clearly list any exact word(s) or phrase(s) in the post that could be problematic (as a list).
+3. Provide a short, positive alternative way for the user to express the same idea without the problematic words or phrases.
+
+Respond only in JSON as follows:
+{{
+  "explanation": "Very short, user-facing explanation here.",
+  "troublesome_words": ["list", "of", "problem", "words"],
+  "suggestion": "Short, friendly rewording here."
+}}
+"""
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {os.getenv('GROQ_API_KEY')}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": "llama3-8b-8192",
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": 400,
+        "temperature": 0.3,
+    }
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=30)
+        try:
+            resp_json = response.json()
+        except Exception as e:
+            logging.error(f"LLM did not return JSON: {e}. Raw response: {response.text}")
+            return "LLM did not return JSON.", [], ""
+        logging.warning(f"LLM raw response: {resp_json}")
+
+        if "choices" in resp_json and resp_json["choices"]:
+            content = resp_json["choices"][0]["message"]["content"]
+            try:
+                import json as _json
+                parsed = _json.loads(content)
+                return (
+                    parsed.get("explanation", ""),
+                    parsed.get("troublesome_words", []),
+                    parsed.get("suggestion", "")
+                )
+            except Exception as ex:
+                logging.warning(f"LLM content is not JSON. Content: {content}. Exception: {ex}")
+                return content, [], ""
+        else:
+            if "error" in resp_json:
+                error_message = resp_json["error"].get("message", str(resp_json["error"]))
+                logging.error(f"LLM API error: {error_message}")
+                return error_message, [], ""
+            logging.error(f"LLM response missing 'choices'. Full response: {resp_json}")
+            return "LLM response missing 'choices'.", [], ""
+    except Exception as e:
+        logging.error(f"Exception during LLM request: {e}")
+        return "LLM request failed.", [], ""
+
+def is_port_available(host, port):
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            s.bind((host, port))
+            return True
+    except OSError as e:
+        logger.error(f"Port {port} is not available: {e}")
+        return False
+
+def find_available_port(host, start_port, max_port=9000):
+    for port in range(start_port, max_port + 1):
+        if is_port_available(host, port):
+            return port
+    return None
+
 @app.get("/")
 def root():
     return {
-        "message": "GuardianAI Content Moderation API", 
+        "message": "GuardianAI Content Moderation API",
         "status": "running",
-        "version": "2.0.0 - Consolidated Pipeline",
+        "version": "2.0.0",
         "models": moderation_engine.get_model_status()
     }
 
@@ -112,19 +181,15 @@ def health():
 
 @app.post("/moderate", response_model=ModerationResponse)
 def moderate_post(request: ModerationRequest):
-    """
-    Main moderation endpoint using consolidated GuardianAI pipeline
-    
-    Processes content through three stages:
-    1. Rule-based filtering
-    2. Detoxify AI toxicity detection
-    3. FinBERT financial fraud detection
-    """
     try:
-        # Run moderation pipeline using consolidated engine
         result = moderation_engine.moderate_content(request.content)
-        
-        # Save to database with enhanced information
+        llm_explanation, llm_troublesome_words, llm_suggestion = "", [], ""
+
+        # Call LLM only if blocked or flagged by *any* strict action (FLAG, BLOCK, etc)
+        if result.action.upper() in ("BLOCK", "FLAG", "FLAG_LOW", "FLAG_MEDIUM", "FLAG_HIGH"):
+            llm_explanation, llm_troublesome_words, llm_suggestion = get_llm_explanation_and_suggestion(request.content)
+
+        import json as _json
         db = SessionLocal()
         post = Post(
             content=request.content,
@@ -134,38 +199,39 @@ def moderate_post(request: ModerationRequest):
             confidence=str(result.confidence),
             stage=result.stage,
             band=result.band,
-            action=result.action
+            action=result.action,
+            llm_explanation=llm_explanation,
+            llm_troublesome_words=_json.dumps(llm_troublesome_words),
+            llm_suggestion=llm_suggestion
         )
         db.add(post)
         db.commit()
         db.refresh(post)
-        logger.info(f"Saved post ID {post.id} to DB - {result.action.upper()}: {result.reason}")
         db.close()
-        
         return ModerationResponse(
             accepted=result.accepted,
             reason=result.reason,
             id=post.id,
             threat_level=result.threat_level,
-            confidence=result.confidence,
+            confidence=float(result.confidence),
             stage=result.stage,
             band=result.band,
             action=result.action,
-            explanation=result.explanation
+            explanation=llm_explanation,
+            troublesome_words=llm_troublesome_words,
+            suggestion=llm_suggestion
         )
-        
     except Exception as e:
         logger.error(f"Moderation error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/posts")
 def get_posts():
-    """Get all moderated posts with enhanced information"""
     try:
+        import json as _json
         db = SessionLocal()
         posts = db.query(Post).order_by(Post.created_at.desc()).all()
         db.close()
-        
         return [
             {
                 "id": post.id,
@@ -177,6 +243,9 @@ def get_posts():
                 "stage": post.stage,
                 "band": getattr(post, 'band', 'SAFE'),
                 "action": getattr(post, 'action', 'PASS'),
+                "llm_explanation": post.llm_explanation,
+                "llm_troublesome_words": _json.loads(post.llm_troublesome_words or "[]"),
+                "llm_suggestion": post.llm_suggestion,
                 "created_at": post.created_at.isoformat()
             }
             for post in posts
@@ -187,29 +256,19 @@ def get_posts():
 
 @app.get("/stats")
 def get_stats():
-    """Get moderation statistics"""
     try:
         db = SessionLocal()
-        
+        from sqlalchemy import func
         total_posts = db.query(Post).count()
         accepted_posts = db.query(Post).filter(Post.accepted == True).count()
         rejected_posts = total_posts - accepted_posts
-        
-        # Get rejection reasons breakdown
-        from sqlalchemy import func
         reason_stats = db.query(
-            Post.stage,
-            func.count(Post.id).label('count')
+            Post.stage, func.count(Post.id).label('count')
         ).filter(Post.accepted == False).group_by(Post.stage).all()
-        
-        # Get threat level breakdown
         threat_stats = db.query(
-            Post.threat_level,
-            func.count(Post.id).label('count')
+            Post.threat_level, func.count(Post.id).label('count')
         ).group_by(Post.threat_level).all()
-        
         db.close()
-        
         return {
             "total_posts": total_posts,
             "accepted": accepted_posts,
@@ -223,63 +282,18 @@ def get_stats():
         logger.error(f"Stats error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/admin/reload-keywords")
-def reload_keywords():
-    """Reload keywords from file - for Day 10 dictionary expansion"""
-    try:
-        moderation_engine.reload_keywords()
-        return {"message": "Keywords reloaded successfully", "count": len(moderation_engine.keywords)}
-    except Exception as e:
-        logger.error(f"Keyword reload error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/admin/update-thresholds")
-def update_thresholds(
-    toxicity_threshold: float = None,
-    finbert_threshold: float = None,
-    llm_escalation_threshold: int = None
-):
-    """Update moderation thresholds - for Day 6 LLM escalation logic"""
-    try:
-        moderation_engine.update_thresholds(
-            toxicity_threshold=toxicity_threshold,
-            finbert_threshold=finbert_threshold,
-            llm_escalation_threshold=llm_escalation_threshold
-        )
-        return {
-            "message": "Thresholds updated successfully",
-            "thresholds": moderation_engine.get_model_status()["thresholds"]
-        }
-    except Exception as e:
-        logger.error(f"Threshold update error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
 if __name__ == "__main__":
     import uvicorn
-    
-    # Server configuration
     host = "0.0.0.0"
     preferred_port = 8000
-    
     logger.info("Starting GuardianAI Content Moderation API...")
-    
-    # Check if preferred port is available
     if is_port_available(host, preferred_port):
         port = preferred_port
-        logger.info(f"✅ Port {port} is available, starting server...")
     else:
-        # Find an alternative port
         port = find_available_port(host, preferred_port + 1)
-        if port:
-            logger.warning(f"⚠️  Port {preferred_port} is busy, using alternative port {port}")
-        else:
-            logger.error(f"❌ No available ports found between {preferred_port+1} and 9000")
+        if not port:
+            logger.error(f"No available ports found between {preferred_port+1} and 9000")
             sys.exit(1)
-    
-    try:
-        logger.info(f"🚀 GuardianAI API will be available at: http://localhost:{port}")
-        logger.info(f"📊 API Documentation: http://localhost:{port}/docs")
-        uvicorn.run(app, host=host, port=port, reload=False)
-    except Exception as e:
-        logger.error(f"❌ Failed to start server: {e}")
-        sys.exit(1) 
+    logger.info(f"🚀 API running at http://localhost:{port}")
+    logger.info(f"📊 Docs at http://localhost:{port}/docs")
+    uvicorn.run(app, host=host, port=port, reload=False)

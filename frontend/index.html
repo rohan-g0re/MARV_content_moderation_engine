@@ -212,6 +212,8 @@
             <h3>📋 Moderation Result</h3>
             <div id="status"></div>
             <div id="reason"></div>
+            <div id="explanation"></div>
+            <div id="suggestion"></div>
             
             <div class="result-details">
                 <div class="detail-item">
@@ -299,12 +301,14 @@
             const result = document.getElementById('result');
             const status = document.getElementById('status');
             const reason = document.getElementById('reason');
+            const explanation = document.getElementById('explanation');
+            const suggestion = document.getElementById('suggestion');
             const band = document.getElementById('band');
             const action = document.getElementById('action');
             const confidenceFill = document.getElementById('confidenceFill');
             const confidenceText = document.getElementById('confidenceText');
             const stage = document.getElementById('stage');
-            
+
             // Set status
             if (data.accepted) {
                 status.innerHTML = '<h2 style="color: #28a745;">✅ ACCEPTED</h2>';
@@ -313,29 +317,34 @@
                 status.innerHTML = '<h2 style="color: #dc3545;">❌ REJECTED</h2>';
                 result.className = 'result rejected';
             }
-            
+
             // Set reason
             reason.innerHTML = `<p><strong>Reason:</strong> ${data.reason}</p>`;
-            
+
+            // Set LLM explanation and suggestion if available
+            explanation.innerHTML = data.explanation ? `<p><strong>Explanation:</strong> ${data.explanation}</p>` : '';
+            suggestion.innerHTML = data.suggestion ? `<p><strong>Suggestion:</strong> <span style="background:#e7f6e7; border-radius:4px; padding:2px 6px;">${data.suggestion}</span></p>` : '';
+
             // Set band with color coding
             const bandClass = getBandClass(data.band);
             band.innerHTML = `<span class="band-badge ${bandClass}">${data.band}</span>`;
-            
+
             // Set action with appropriate styling
             const actionClass = getActionClass(data.action);
             action.innerHTML = `<span class="action-badge ${actionClass}">${data.action}</span>`;
-            
+
             // Set confidence score with visual bar
             const confidencePercent = Math.round(data.confidence * 100);
             confidenceFill.style.width = `${confidencePercent}%`;
             confidenceFill.style.backgroundColor = getConfidenceColor(data.confidence);
             confidenceText.textContent = `${confidencePercent}%`;
-            
+
             // Set processing stage
             stage.innerHTML = `<strong>${data.stage.toUpperCase()}</strong>`;
-            
+
             result.style.display = 'block';
         }
+
         
         function getBandClass(band) {
             const bandClasses = {
