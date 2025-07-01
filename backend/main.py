@@ -19,7 +19,6 @@ BASE_DIR = pathlib.Path(__file__).resolve().parent.parent
 dotenv_path = BASE_DIR / ".env"
 print(f"Loading .env from: {dotenv_path}")
 load_dotenv(dotenv_path)
-print("DEBUG: GROQ_API_KEY is:", os.getenv("GROQ_API_KEY"))
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -121,20 +120,25 @@ Respond only in JSON as follows:
         except Exception as e:
             logging.error(f"LLM did not return JSON: {e}. Raw response: {response.text}")
             return "LLM did not return JSON.", [], ""
-        logging.warning(f"LLM raw response: {resp_json}")
-
+        
         if "choices" in resp_json and resp_json["choices"]:
             content = resp_json["choices"][0]["message"]["content"]
             try:
                 import json as _json
-                parsed = _json.loads(content)
-                return (
-                    parsed.get("explanation", ""),
-                    parsed.get("troublesome_words", []),
-                    parsed.get("suggestion", "")
-                )
+                # Find the start and end of the JSON object to handle preambles
+                json_start = content.find('{')
+                json_end = content.rfind('}')
+                if json_start != -1 and json_end != -1:
+                    json_str = content[json_start:json_end+1]
+                    parsed = _json.loads(json_str)
+                    return (
+                        parsed.get("explanation", ""),
+                        parsed.get("troublesome_words", []),
+                        parsed.get("suggestion", "")
+                    )
+                else:
+                    raise ValueError("No JSON object found in LLM response")
             except Exception as ex:
-                logging.warning(f"LLM content is not JSON. Content: {content}. Exception: {ex}")
                 return content, [], ""
         else:
             if "error" in resp_json:

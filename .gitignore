@@ -281,4 +281,7 @@ docs/*
 !docs/.gitkeep
 
 # Helper scripts
-create_env.py 
+create_env.py
+
+# Ignore local environment variables file
+.env 
