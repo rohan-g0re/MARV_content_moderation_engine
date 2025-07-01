@@ -1,324 +1,296 @@
-#!/usr/bin/env python3
-"""
-Comprehensive Test Script for GuardianAI Content Moderation System v2.0
-
-Tests the consolidated three-stage moderation pipeline:
-1. Rule-based filtering
-2. Detoxify AI toxicity detection  
-3. FinBERT financial fraud detection
-
-PowerShell Commands for manual testing:
-# Test moderation
-Invoke-RestMethod -Uri "http://localhost:8000/moderate" -Method POST -ContentType "application/json" -Body '{"content": "You are a scammer and I hate this!"}'
-
-# Get all posts
-Invoke-RestMethod -Uri "http://localhost:8000/posts" -Method GET
-
-# Get statistics
-Invoke-RestMethod -Uri "http://localhost:8000/stats" -Method GET
-"""
-
-import requests
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Text
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from transformers import pipeline
+import datetime
+import re
 import json
-import time
-import logging
+import os
+import requests
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# ========== Load .env for GROQ API Key ==========
+from dotenv import load_dotenv
+load_dotenv()
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-# API endpoint
-API_URL = "http://localhost:8000"
+# Initialize FastAPI
+app = FastAPI(title="Content Moderation API", version="1.0.0")
 
-def test_health():
-    """Test health endpoint and model status"""
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Database setup
+DATABASE_URL = "sqlite:///./moderation.db"
+print(f"[INFO] Using database at: {os.path.abspath('moderation.db')}")
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+# Database model
+class Post(Base):
+    __tablename__ = "posts"
+    id = Column(Integer, primary_key=True, index=True)
+    content = Column(Text, nullable=False)
+    accepted = Column(Boolean, nullable=False)
+    reason = Column(Text, nullable=False)
+    llm_explanation = Column(Text, default="")
+    llm_troublesome_words = Column(Text, default="")
+    llm_suggestion = Column(Text, default="")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+Base.metadata.create_all(bind=engine)
+
+# Pydantic models
+class ModerationRequest(BaseModel):
+    content: str
+
+class ModerationResponse(BaseModel):
+    accepted: bool
+    reason: str
+    id: int
+    llm_explanation: str = ""
+    llm_troublesome_words: list = []
+    llm_suggestion: str = ""
+
+# Load keywords from file
+def load_keywords():
+    """Load keywords from words.json"""
+    keywords = []
     try:
-        logger.info("🔍 Testing health endpoint...")
-        response = requests.get(f"{API_URL}/health", timeout=10)
-        
-        if response.status_code == 200:
-            data = response.json()
-            logger.info("✅ Health check passed")
-            logger.info(f"Models status: {data.get('models', {})}")
-            return True
-        else:
-            logger.error(f"❌ Health check failed: {response.status_code}")
-            return False
-            
-    except requests.RequestException as e:
-        logger.error(f"❌ Health check failed: {e}")
-        logger.error("Make sure the backend is running: python backend/main.py")
-        return False
+        with open("words.json", "r", encoding="utf-8") as f:
+            keywords = json.load(f)
+        print(f"✅ Loaded {len(keywords)} keywords from words.json")
+    except FileNotFoundError:
+        print("⚠️ words.json not found, using default keywords")
+        # Default keywords if file doesn't exist
+        keywords = ["scammer", "fraud", "hate", "violence", "spam", "badword1", "badword2"]
+    except json.JSONDecodeError as e:
+        print(f"⚠️ Error parsing words.json: {e}")
+        keywords = ["scammer", "fraud", "hate", "violence", "spam"]
+    return keywords
 
-def test_moderation():
-    """Test the enhanced moderation endpoint with various content"""
-    
-    test_cases = [
-        {
-            "content": "This is a normal post about technology and innovation.",
-            "expected": "accepted",
-            "description": "Normal technology discussion"
-        },
-        {
-            "content": "You are a scammer and I hate this!",
-            "expected": "rejected",
-            "description": "Rule-based rejection (keywords)"
-        },
-        {
-            "content": "I love this amazing product, it's fantastic!",
-            "expected": "accepted", 
-            "description": "Positive content"
-        },
-        {
-            "content": "This is fraud and illegal financial activity for sure.",
-            "expected": "rejected",
-            "description": "Financial fraud detection"
-        },
-        {
-            "content": "Check out this website: http://spam-site.com for free money",
-            "expected": "rejected",
-            "description": "URL pattern detection"
-        },
-        {
-            "content": "Contact me at spam@badsite.com for quick cash schemes",
-            "expected": "rejected",
-            "description": "Email pattern detection"
-        },
-        {
-            "content": "I will kill your account if you don't pay",
-            "expected": "rejected",
-            "description": "Violence/threat pattern detection"
-        },
-        {
-            "content": "The stock market analysis shows positive trends this quarter.",
-            "expected": "accepted",
-            "description": "Professional financial discussion"
-        },
-        {
-            "content": "Call me at 1234567890 for exclusive investment opportunities",
-            "expected": "rejected", 
-            "description": "Phone number detection"
-        },
-        {
-            "content": "🚀 Excited about the new tech developments! #innovation #tech",
-            "expected": "accepted",
-            "description": "Social media style positive content"
-        }
+# Initialize models
+print("Loading models...")
+try:
+    # Detoxify for toxicity detection
+    toxicity_classifier = pipeline("text-classification", model="unitary/toxic-bert")
+    # FinBERT for financial sentiment
+    finbert_classifier = pipeline("text-classification", model="ProsusAI/finbert")
+    print("✅ Models loaded successfully!")
+except Exception as e:
+    print(f"⚠️ Model loading failed: {e}")
+    print("Using fallback rule-based detection")
+    toxicity_classifier = None
+    finbert_classifier = None
+
+# Moderation functions
+def rule_based_filter(text: str) -> tuple[bool, str]:
+    """Step 1: Rule-based filtering (case-insensitive, whole word)"""
+    keywords = load_keywords()
+    text_lower = text.lower()
+    for keyword in keywords:
+        # Use regex for whole word match, case-insensitive
+        if re.search(rf'\b{re.escape(keyword.lower())}\b', text_lower):
+            return False, f"Rule-based: {keyword}"
+    # Check regex patterns
+    patterns = [
+        r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+",
+        r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",
+        r"\b\d{10,}\b",  # Phone numbers
+        # Violence/threat/crime regex
+        r"\b(kill|bash|hack|steal|threat|attack|rape|murder|shoot|stab|destroy|burn|harass|stalk|blackmail|assault|abuse|bully|rob|terror|terrorist|explosive|bomb|kidnap|extort)\b"
     ]
-    
-    logger.info("🧪 Testing Enhanced Content Moderation System")
-    logger.info("=" * 70)
-    
-    passed_tests = 0
-    total_tests = len(test_cases)
-    
-    for i, test_case in enumerate(test_cases, 1):
-        logger.info(f"Test {i}/{total_tests}: {test_case['description']}")
-        logger.info(f"Content: \"{test_case['content']}\"")
-        
-        try:
-            response = requests.post(
-                f"{API_URL}/moderate",
-                json={"content": test_case["content"]},
-                headers={"Content-Type": "application/json"},
-                timeout=30
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                # Enhanced logging with new fields
-                logger.info(f"✅ Status: {response.status_code}")
-                logger.info(f"   Accepted: {data['accepted']}")
-                logger.info(f"   Reason: {data['reason']}")
-                logger.info(f"   Threat Level: {data.get('threat_level', 'N/A')}")
-                logger.info(f"   Confidence: {data.get('confidence', 'N/A')}")
-                logger.info(f"   Stage: {data.get('stage', 'N/A')}")
-                logger.info(f"   Action: {data.get('action', 'N/A')}")
-                logger.info(f"   Post ID: {data['id']}")
-                
-                # Check if result matches expectation
-                actual_result = "accepted" if data["accepted"] else "rejected"
-                if actual_result == test_case["expected"]:
-                    logger.info("   ✅ Result matches expectation")
-                    passed_tests += 1
-                else:
-                    logger.warning(f"   ⚠️ Expected {test_case['expected']}, got {actual_result}")
-                    
+    for pattern in patterns:
+        if re.search(pattern, text, re.IGNORECASE):
+            return False, f"Rule-based: {pattern}"
+    return True, ""
+
+def detoxify_check(text: str) -> tuple[bool, str]:
+    """Step 2: Detoxify toxicity detection (fix label logic)"""
+    if toxicity_classifier is None:
+        return True, ""
+    try:
+        result = toxicity_classifier(text)
+        label = result[0]['label'].lower()
+        score = result[0]['score']
+        if label in ['toxic', 'label_1'] and score > 0.5:
+            return False, f"Toxic (Detoxify): {score:.2f}"
+        return True, ""
+    except Exception as e:
+        print(f"Detoxify error: {e}")
+        return True, ""
+
+def finbert_check(text: str) -> tuple[bool, str]:
+    """Step 3: FinBERT fraud detection"""
+    if finbert_classifier is None:
+        return True, ""
+    try:
+        result = finbert_classifier(text)
+        sentiment = result[0]['label']
+        confidence = result[0]['score']
+        # Consider negative sentiment as potential fraud
+        if sentiment == 'negative' and confidence > 0.7:
+            return False, f"Potential Fraud (FinBERT): {sentiment} ({confidence:.2f})"
+        return True, ""
+    except Exception as e:
+        print(f"FinBERT error: {e}")
+        return True, ""
+
+def moderate_content(content: str) -> tuple[bool, str]:
+    """Main moderation pipeline"""
+    # Step 1: Rule-based filtering
+    passed, reason = rule_based_filter(content)
+    if not passed:
+        return False, reason
+    # Step 2: Detoxify
+    passed, reason = detoxify_check(content)
+    if not passed:
+        return False, reason
+    # Step 3: FinBERT
+    passed, reason = finbert_check(content)
+    if not passed:
+        return False, reason
+    return True, "All checks passed"
+
+# LLM Escalation Logic
+def get_llm_explanation_and_suggestion(post_text):
+    prompt = f"""
+A user's social media post was flagged as inappropriate.
+
+Post:
+{post_text}
+
+Instructions:
+
+1. Briefly explain, in plain language (1-2 sentences), why the post may be considered inappropriate. Do NOT mention algorithms, models, scores, or moderation systems.
+2. Clearly list any exact word(s) or phrase(s) in the post that could be problematic (as a list).
+3. Provide a short, positive alternative way for the user to express the same idea without the problematic words or phrases.
+
+Respond only in JSON as follows:
+{{
+  "explanation": "Very short, user-facing explanation here.",
+  "troublesome_words": ["list", "of", "problem", "words"],
+  "suggestion": "Short, friendly rewording here."
+}}
+"""
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": "llama3-8b-8192",
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": 400,
+        "temperature": 0.3,
+    }
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=30)
+        resp_json = response.json()
+        if "choices" in resp_json and resp_json["choices"]:
+            content = resp_json["choices"][0]["message"]["content"]
+            import re as _re, json as _json
+            json_match = _re.search(r"\{.*\}", content, _re.DOTALL)
+            if json_match:
+                json_str = json_match.group(0)
+                try:
+                    parsed = _json.loads(json_str)
+                    return (
+                        parsed.get("explanation", ""),
+                        parsed.get("troublesome_words", []),
+                        parsed.get("suggestion", "")
+                    )
+                except Exception as ex:
+                    print(f"LLM content is not valid JSON. Content: {json_str}. Exception: {ex}")
+                    return content, [], ""
             else:
-                logger.error(f"❌ Request failed: {response.status_code}")
-                logger.error(f"   Response: {response.text}")
-                
-        except requests.RequestException as e:
-            logger.error(f"❌ Request failed: {e}")
-        
-        logger.info("-" * 70)
-        time.sleep(0.5)  # Small delay between requests
-    
-    # Summary
-    success_rate = (passed_tests / total_tests) * 100
-    logger.info(f"📊 Test Summary: {passed_tests}/{total_tests} tests passed ({success_rate:.1f}%)")
-    
-    if success_rate >= 80:
-        logger.info("🎉 Moderation system working well!")
-    else:
-        logger.warning("⚠️ Some tests failed - check moderation logic")
-    
-    return success_rate >= 80
-
-def test_get_posts():
-    """Test getting all posts with enhanced information"""
-    try:
-        logger.info("📄 Testing get posts endpoint...")
-        response = requests.get(f"{API_URL}/posts", timeout=10)
-        
-        if response.status_code == 200:
-            posts = response.json()
-            logger.info(f"✅ Retrieved {len(posts)} posts")
-            
-            if posts:
-                # Show details of the most recent post
-                latest_post = posts[0]
-                logger.info("Latest post details:")
-                logger.info(f"   ID: {latest_post['id']}")
-                logger.info(f"   Content: \"{latest_post['content'][:50]}...\"")
-                logger.info(f"   Accepted: {latest_post['accepted']}")
-                logger.info(f"   Reason: {latest_post['reason']}")
-                logger.info(f"   Threat Level: {latest_post.get('threat_level', 'N/A')}")
-                logger.info(f"   Stage: {latest_post.get('stage', 'N/A')}")
-                logger.info(f"   Created: {latest_post['created_at']}")
-            
-            return True
+                print(f"Could not find JSON object in LLM response: {content}")
+                return content, [], ""
         else:
-            logger.error(f"❌ Failed to get posts: {response.status_code}")
-            return False
-            
-    except requests.RequestException as e:
-        logger.error(f"❌ Failed to get posts: {e}")
-        return False
+            if "error" in resp_json:
+                error_message = resp_json["error"].get("message", str(resp_json["error"]))
+                print(f"LLM API error: {error_message}")
+                return error_message, [], ""
+            print(f"LLM response missing 'choices'. Full response: {resp_json}")
+            return "LLM response missing 'choices'.", [], ""
+    except Exception as e:
+        print(f"Exception during LLM request: {e}")
+        return "LLM request failed.", [], ""
 
-def test_stats():
-    """Test the new statistics endpoint"""
-    try:
-        logger.info("📊 Testing statistics endpoint...")
-        response = requests.get(f"{API_URL}/stats", timeout=10)
-        
-        if response.status_code == 200:
-            stats = response.json()
-            logger.info("✅ Statistics retrieved successfully:")
-            logger.info(f"   Total posts: {stats.get('total_posts', 0)}")
-            logger.info(f"   Accepted: {stats.get('accepted', 0)}")
-            logger.info(f"   Rejected: {stats.get('rejected', 0)}")
-            logger.info(f"   Acceptance rate: {stats.get('acceptance_rate', 0):.1f}%")
-            
-            # Rejection breakdown by stage
-            rejection_stats = stats.get('rejection_by_stage', {})
-            if rejection_stats:
-                logger.info("   Rejection by stage:")
-                for stage, count in rejection_stats.items():
-                    logger.info(f"     {stage}: {count}")
-            
-            # Threat level distribution
-            threat_stats = stats.get('threat_levels', {})
-            if threat_stats:
-                logger.info("   Threat level distribution:")
-                for level, count in threat_stats.items():
-                    logger.info(f"     {level}: {count}")
-            
-            # Model status
-            models = stats.get('models', {})
-            logger.info(f"   Models loaded: Detoxify={models.get('detoxify_loaded', False)}, FinBERT={models.get('finbert_loaded', False)}")
-            
-            return True
-        else:
-            logger.error(f"❌ Failed to get stats: {response.status_code}")
-            return False
-            
-    except requests.RequestException as e:
-        logger.error(f"❌ Failed to get stats: {e}")
-        return False
+# API endpoints
+@app.get("/")
+def root():
+    return {"message": "Content Moderation API", "status": "running"}
 
-def test_admin_endpoints():
-    """Test admin endpoints for keyword management"""
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
+
+@app.post("/moderate", response_model=ModerationResponse)
+def moderate_post(request: ModerationRequest):
+    """Main moderation endpoint"""
     try:
-        logger.info("🔧 Testing admin endpoints...")
-        
-        # Test keyword reload
-        response = requests.post(f"{API_URL}/admin/reload-keywords", timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            logger.info(f"✅ Keywords reloaded: {data.get('count', 0)} keywords")
-        else:
-            logger.warning(f"⚠️ Keyword reload failed: {response.status_code}")
-        
-        # Test threshold update
-        response = requests.post(
-            f"{API_URL}/admin/update-thresholds",
-            params={
-                "toxicity_threshold": 0.5,
-                "finbert_threshold": 0.7
-            },
-            timeout=10
+        # Run moderation pipeline
+        accepted, reason = moderate_content(request.content)
+        llm_explanation, llm_troublesome_words, llm_suggestion = "", [], ""
+        # Only call LLM if rejected
+        if not accepted:
+            llm_explanation, llm_troublesome_words, llm_suggestion = get_llm_explanation_and_suggestion(request.content)
+        db = SessionLocal()
+        import json as _json
+        post = Post(
+            content=request.content,
+            accepted=accepted,
+            reason=reason,
+            llm_explanation=llm_explanation,
+            llm_troublesome_words=_json.dumps(llm_troublesome_words),
+            llm_suggestion=llm_suggestion
         )
-        if response.status_code == 200:
-            logger.info("✅ Thresholds updated successfully")
-        else:
-            logger.warning(f"⚠️ Threshold update failed: {response.status_code}")
-            
-        return True
-        
-    except requests.RequestException as e:
-        logger.error(f"❌ Admin endpoint tests failed: {e}")
-        return False
+        db.add(post)
+        db.commit()
+        db.refresh(post)
+        db.close()
+        return ModerationResponse(
+            accepted=accepted,
+            reason=reason,
+            id=post.id,
+            llm_explanation=llm_explanation,
+            llm_troublesome_words=llm_troublesome_words,
+            llm_suggestion=llm_suggestion
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-def main():
-    """Main test execution"""
-    logger.info("🚀 Starting GuardianAI Content Moderation Tests v2.0...")
-    logger.info("=" * 70)
-    
-    start_time = time.time()
-    all_passed = True
-    
-    # Test sequence
-    tests = [
-        ("Health Check", test_health),
-        ("Moderation Pipeline", test_moderation),
-        ("Get Posts", test_get_posts),
-        ("Statistics", test_stats),
-        ("Admin Endpoints", test_admin_endpoints)
+@app.get("/posts")
+def get_posts():
+    """Get all moderated posts"""
+    db = SessionLocal()
+    posts = db.query(Post).order_by(Post.created_at.desc()).all()
+    db.close()
+    import json as _json
+    return [
+        {
+            "id": post.id,
+            "content": post.content,
+            "accepted": post.accepted,
+            "reason": post.reason,
+            "llm_explanation": post.llm_explanation,
+            "llm_troublesome_words": _json.loads(post.llm_troublesome_words or "[]"),
+            "llm_suggestion": post.llm_suggestion,
+            "created_at": post.created_at.isoformat()
+        }
+        for post in posts
     ]
-    
-    for test_name, test_func in tests:
-        logger.info(f"\n🔍 Running {test_name} tests...")
-        try:
-            result = test_func()
-            if not result:
-                all_passed = False
-                logger.error(f"❌ {test_name} tests failed")
-            else:
-                logger.info(f"✅ {test_name} tests passed")
-        except Exception as e:
-            logger.error(f"❌ {test_name} tests crashed: {e}")
-            all_passed = False
-    
-    # Final summary
-    end_time = time.time()
-    duration = end_time - start_time
-    
-    logger.info("\n" + "=" * 70)
-    if all_passed:
-        logger.info("🎉 All tests completed successfully!")
-        logger.info("✨ GuardianAI Content Moderation System v2.0 is working correctly!")
-    else:
-        logger.error("❌ Some tests failed. Check the logs above for details.")
-    
-    logger.info(f"⏱️  Total test duration: {duration:.2f} seconds")
-    logger.info("\n📖 Manual Testing Commands:")
-    logger.info('Invoke-RestMethod -Uri "http://localhost:8000/moderate" -Method POST -ContentType "application/json" -Body \'{"content": "test content"}\'')
-    logger.info('Invoke-RestMethod -Uri "http://localhost:8000/posts" -Method GET')
-    logger.info('Invoke-RestMethod -Uri "http://localhost:8000/stats" -Method GET')
-    logger.info("\n🌐 Frontend: Open frontend/index.html in your browser")
-    logger.info("📚 API Documentation: http://localhost:8000/docs")
 
 if __name__ == "__main__":
-    main() 
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
