@@ -4,13 +4,17 @@ import logging
 import socket
 import sys
 import pathlib
+import time
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Text
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Text, func, text
 from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.exc import OperationalError, SQLAlchemyError
 import requests
+import psycopg2
+from psycopg2 import sql
 
 from dotenv import load_dotenv
 
@@ -26,8 +30,226 @@ logger = logging.getLogger(__name__)
 # ---- Import your moderation engine! ----
 from app.core.moderation import GuardianModerationEngine
 
-DATABASE_URL = "sqlite:///./moderation.db"
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+# Database configuration
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:123456@localhost:5432/content_moderation")
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = os.getenv("DB_PORT", "5432")
+DB_NAME = os.getenv("DB_NAME", "content_moderation")
+DB_USER = os.getenv("DB_USER", "postgres")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "123456")
+
+def test_database_connection():
+    """Test if we can connect to PostgreSQL database"""
+    try:
+        logger.info(f"Testing connection to PostgreSQL database: {DB_HOST}:{DB_PORT}/{DB_NAME}")
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            port=DB_PORT,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD
+        )
+        conn.close()
+        logger.info("✅ Successfully connected to PostgreSQL database")
+        return True
+    except psycopg2.OperationalError as e:
+        logger.error(f"❌ Failed to connect to PostgreSQL database: {e}")
+        return False
+    except Exception as e:
+        logger.error(f"❌ Unexpected error connecting to database: {e}")
+        return False
+
+def ensure_database_exists():
+    """Ensure the content_moderation database exists"""
+    try:
+        # Connect to default postgres database to create our database if needed
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            port=DB_PORT,
+            database="postgres",  # Connect to default database
+            user=DB_USER,
+            password=DB_PASSWORD
+        )
+        conn.autocommit = True
+        cursor = conn.cursor()
+        
+        # Check if database exists
+        cursor.execute("SELECT 1 FROM pg_database WHERE datname = %s", (DB_NAME,))
+        exists = cursor.fetchone()
+        
+        if not exists:
+            logger.info(f"Creating database: {DB_NAME}")
+            cursor.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(DB_NAME)))
+            logger.info(f"✅ Database {DB_NAME} created successfully")
+        else:
+            logger.info(f"✅ Database {DB_NAME} already exists")
+            
+        cursor.close()
+        conn.close()
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Error ensuring database exists: {e}")
+        return False
+
+def check_table_exists(table_name="posts"):
+    """Check if a specific table exists in the database"""
+    try:
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            port=DB_PORT,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD
+        )
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = %s
+            );
+        """, (table_name,))
+        
+        exists = cursor.fetchone()[0]
+        cursor.close()
+        conn.close()
+        
+        return exists
+        
+    except Exception as e:
+        logger.error(f"❌ Error checking if table '{table_name}' exists: {e}")
+        return False
+
+def validate_table_structure(table_name="posts"):
+    """Validate that the table has the expected structure"""
+    try:
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            port=DB_PORT,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD
+        )
+        cursor = conn.cursor()
+        
+        # Get table columns
+        cursor.execute("""
+            SELECT column_name, data_type, is_nullable, column_default 
+            FROM information_schema.columns 
+            WHERE table_name = %s 
+            ORDER BY ordinal_position;
+        """, (table_name,))
+        
+        columns = cursor.fetchall()
+        actual_columns = [col[0] for col in columns]
+        
+        # Expected columns for posts table
+        expected_columns = [
+            'id', 'content', 'accepted', 'reason', 'threat_level',
+            'confidence', 'stage', 'band', 'action', 'created_at',
+            'llm_explanation', 'llm_troublesome_words', 'llm_suggestion'
+        ]
+        
+        missing_columns = [col for col in expected_columns if col not in actual_columns]
+        extra_columns = [col for col in actual_columns if col not in expected_columns]
+        
+        if missing_columns:
+            logger.warning(f"⚠️ Missing columns in '{table_name}': {missing_columns}")
+            return False
+            
+        if extra_columns:
+            logger.info(f"ℹ️ Extra columns in '{table_name}': {extra_columns}")
+        
+        logger.info(f"✅ Table '{table_name}' structure is valid")
+        cursor.close()
+        conn.close()
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Error validating table '{table_name}' structure: {e}")
+        return False
+
+def ensure_tables_exist():
+    """Ensure required tables exist with proper structure"""
+    try:
+        table_exists = check_table_exists("posts")
+        
+        if table_exists:
+            logger.info("✅ Posts table already exists")
+            
+            # Validate structure
+            if validate_table_structure("posts"):
+                logger.info("✅ Posts table structure is valid")
+                return True
+            else:
+                logger.warning("⚠️ Posts table structure validation failed")
+                # You could add logic here to migrate or recreate table if needed
+                return False
+        else:
+            logger.info("🔧 Posts table does not exist, creating...")
+            # Create tables using SQLAlchemy
+            Base.metadata.create_all(bind=engine)
+            logger.info("✅ Posts table created successfully")
+            
+            # Validate the newly created table
+            if validate_table_structure("posts"):
+                logger.info("✅ Newly created table structure validated")
+                return True
+            else:
+                logger.error("❌ Newly created table structure validation failed")
+                return False
+                
+    except Exception as e:
+        logger.error(f"❌ Error ensuring tables exist: {e}")
+        return False
+
+def create_engine_with_retry(max_retries=3, retry_delay=2):
+    """Create SQLAlchemy engine with retry logic"""
+    for attempt in range(max_retries):
+        try:
+            logger.info(f"Creating SQLAlchemy engine (attempt {attempt + 1}/{max_retries})")
+            engine = create_engine(
+                DATABASE_URL,
+                pool_size=int(os.getenv("DB_POOL_SIZE", "10")),
+                max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "20")),
+                pool_timeout=int(os.getenv("DB_POOL_TIMEOUT", "30")),
+                pool_recycle=int(os.getenv("DB_POOL_RECYCLE", "3600")),
+                echo=False  # Set to True for SQL query logging
+            )
+            
+            # Test the connection
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            
+            logger.info("✅ SQLAlchemy engine created successfully")
+            return engine
+            
+        except Exception as e:
+            logger.error(f"❌ Attempt {attempt + 1} failed: {e}")
+            if attempt < max_retries - 1:
+                logger.info(f"Retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+            else:
+                logger.error("❌ All attempts to create engine failed")
+                raise
+
+# Initialize database connection
+logger.info("🔗 Initializing database connection...")
+
+# Ensure database exists first
+if not ensure_database_exists():
+    logger.error("❌ Failed to ensure database exists. Exiting...")
+    sys.exit(1)
+
+# Test connection
+if not test_database_connection():
+    logger.error("❌ Database connection test failed. Exiting...")
+    sys.exit(1)
+
+# Create engine with retry
+engine = create_engine_with_retry()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -42,12 +264,21 @@ class Post(Base):
     stage = Column(String, default="unknown")
     band = Column(String, default="SAFE")
     action = Column(String, default="PASS")
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=func.now())
     llm_explanation = Column(Text, default="")
     llm_troublesome_words = Column(Text, default="")
     llm_suggestion = Column(Text, default="")
 
-Base.metadata.create_all(bind=engine)
+# Ensure tables exist with proper validation
+try:
+    logger.info("🔧 Ensuring database tables exist with validation...")
+    if not ensure_tables_exist():
+        logger.error("❌ Failed to ensure tables exist properly")
+        sys.exit(1)
+    logger.info("✅ Database tables ready and validated")
+except Exception as e:
+    logger.error(f"❌ Error ensuring tables exist: {e}")
+    sys.exit(1)
 
 app = FastAPI(
     title="GuardianAI Content Moderation API",

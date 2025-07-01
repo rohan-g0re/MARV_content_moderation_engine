@@ -56,8 +56,8 @@ coverage.xml
 # Django stuff:
 *.log
 local_settings.py
-db.sqlite3
-db.sqlite3-journal
+# PostgreSQL database files (if any local dumps)
+*.sql.backup
 
 # Flask stuff:
 instance/
@@ -217,8 +217,8 @@ logs
 
 # Database files
 *.db
-*.sqlite
-*.sqlite3
+# Local database files
+*.db
 
 # IDE files
 .vscode/

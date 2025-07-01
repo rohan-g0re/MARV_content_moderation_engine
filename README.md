@@ -54,7 +54,7 @@ graph TD
     P --> T["🔴 FLAG_HIGH<br/>0.6-0.8<br/>Action: FLAG_HIGH"]
     P --> U["🟣 BLOCK<br/>0.8-1.0<br/>Action: BLOCK"]
     
-    H --> V["💾 Enhanced Database<br/>SQLite + Band/Action"]
+    H --> V["💾 Enhanced Database<br/>PostgreSQL + Band/Action"]
     L --> V
     Q --> V
     R --> V
@@ -66,7 +66,7 @@ graph TD
     W --> X["🔄 Updated Frontend<br/>Band Badges + Confidence Bars"]
     
     Y["📁 data/external/words.json<br/>2736 Keywords"] --> F
-    Z["🗄️ moderation.db<br/>Enhanced Schema"] --> V
+    Z["🗄️ PostgreSQL<br/>Enhanced Schema"] --> V
     
     style A fill:#e1f5fe
     style D fill:#f3e5f5
@@ -151,7 +151,7 @@ graph TD
 |-----------|------------|---------|
 | **Backend** | FastAPI + Python | High-performance async API |
 | **AI Models** | Detoxify + FinBERT | Toxicity & financial analysis |
-| **Database** | SQLite | Content storage & analytics |
+| **Database** | PostgreSQL | Content storage & analytics |
 | **Frontend** | HTML5 + JavaScript | User interface |
 | **Keywords** | 2,736 curated terms | Rule-based filtering |
 

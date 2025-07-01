@@ -250,7 +250,7 @@ graph TD
     P --> T["🔴 FLAG_HIGH<br/>0.6-0.8<br/>Action: FLAG_HIGH"]
     P --> U["🟣 BLOCK<br/>0.8-1.0<br/>Action: BLOCK"]
     
-    H --> V["💾 Enhanced Database<br/>SQLite + Band/Action"]
+    H --> V["💾 Enhanced Database<br/>PostgreSQL + Band/Action"]
     L --> V
     Q --> V
     R --> V
@@ -262,7 +262,7 @@ graph TD
     W --> X["🔄 Updated Frontend<br/>Band Badges + Confidence Bars"]
     
     Y["📁 data/external/words.json<br/>2736 Keywords"] --> F
-    Z["🗄️ moderation.db<br/>Enhanced Schema"] --> V
+    Z["🗄️ PostgreSQL<br/>Enhanced Schema"] --> V
     
     style A fill:#e1f5fe
     style D fill:#f3e5f5
@@ -426,7 +426,7 @@ sequenceDiagram
             </div>
             <div class="mermaid">
 graph TD
-    A["🚀 FastAPI Application Startup"] --> B["🗄️ Initialize Enhanced SQLite<br/>moderation.db"]
+    A["🚀 FastAPI Application Startup"] --> B["🗄️ Initialize PostgreSQL<br/>content_moderation"]
     
     B --> C["📋 Create Enhanced Post Table"]
     C --> D["🏗️ Enhanced Table: posts<br/>- id (Primary Key)<br/>- content (Text)<br/>- accepted (Boolean)<br/>- reason (Text)<br/>- threat_level (String)<br/>- confidence (String)<br/>🆕 band (String)<br/>🆕 action (String)<br/>- stage (String)<br/>- created_at (DateTime)"]
@@ -583,7 +583,7 @@ graph TB
     
     subgraph "💾 Enhanced Data Layer"
         O["📁 data/external/words.json<br/>2736 Enhanced Keywords"]
-        P["🗄️ moderation.db v2.0<br/>Enhanced SQLite Schema<br/>- Posts table<br/>🆕 band column<br/>🆕 action column<br/>- Enhanced metadata<br/>- Band analytics support"]
+        P["🗄️ PostgreSQL v2.0<br/>Enhanced Database Schema<br/>- Posts table<br/>🆕 band column<br/>🆕 action column<br/>- Enhanced metadata<br/>- Band analytics support"]
     end
     
     subgraph "🤖 Advanced AI Models"
