@@ -113,8 +113,8 @@ class Stage1LexicalFilter(ModerationStage):
             r'\b[13][a-km-zA-HJ-NP-Z1-9]{25,34}\b',  # Bitcoin addresses
             r'\b0x[a-fA-F0-9]{40}\b',  # Ethereum addresses
             r'\b[A-Z]{2}[0-9]{2}[A-Z0-9]{4}[0-9]{7}([A-Z0-9]?){0,16}\b',  # IBAN
-            r'\$[a-zA-Z0-9]{1,20}\b',  # Cash App tags
-            r'\b[a-zA-Z0-9]{26,35}\b',  # Generic crypto addresses
+            r'\$[a-zA-Z0-9]{3,20}\b',  # Cash App tags (min 3 chars to avoid $7, $50, etc)
+            r'\b[a-zA-Z0-9]{26,35}\b',  # Generic crypto addresses (min 26 chars)
         ]
         return any(re.search(pattern, text) for pattern in patterns)
     
@@ -155,10 +155,10 @@ class Stage1LexicalFilter(ModerationStage):
         # Check URLs
         if self._check_urls(text):
             return ModerationResult(
-                decision="BLOCK",
+                decision="ESCALATE",
                 stage=self.stage_name,
                 reason="lexical_rule: suspicious_url",
-                confidence=0.7,
+                confidence=0.6,
                 threat_level="medium"
             )
         
@@ -282,13 +282,13 @@ class Stage3aSentimentSentinels(ModerationStage):
             }
             
             # Flag highly negative sentiment for review (but don't block)
-            if sentiment == 'negative' and confidence > 0.7:
+            if sentiment == 'negative' and confidence > 0.8:
                 return ModerationResult(
-                    decision="ESCALATE",
+                    decision="ACCEPT",
                     stage=self.stage_name,
-                    reason=f"sentiment: highly_negative_{confidence:.3f}",
+                    reason=f"sentiment_warning: highly_negative_{confidence:.3f}",
                     confidence=confidence,
-                    threat_level="medium",
+                    threat_level="low",
                     metadata=metadata
                 )
             
@@ -548,7 +548,7 @@ class Stage3bFraudClassifier(ModerationStage):
         )
         
         # Decision logic
-        if ensemble_score >= 0.8:
+        if ensemble_score >= 0.9:
             return ModerationResult(
                 decision="BLOCK",
                 stage=self.stage_name,
@@ -565,6 +565,7 @@ class Stage3bFraudClassifier(ModerationStage):
                 threat_level="low"
             )
         else:
+            # mid-range → escalate rather than block
             return ModerationResult(
                 decision="ESCALATE",
                 stage=self.stage_name,
@@ -574,7 +575,7 @@ class Stage3bFraudClassifier(ModerationStage):
             )
 
 class LLMEscalation(ModerationStage):
-    """LLM Escalation 2.0 with Chain-of-Thought reasoning"""
+    """LLM Escalation 2.0 with Chain-of-Thought reasoning (context-aware, less sensitive)"""
     
     def __init__(self, groq_api_key: str = None):
         self.groq_api_key = groq_api_key or os.getenv("GROQ_API_KEY", "your_groq_api_key_here")
@@ -583,29 +584,33 @@ class LLMEscalation(ModerationStage):
     def stage_name(self) -> str:
         return "llm"
     
-    def _call_llm_with_cot(self, text: str, context: Dict[str, Any] = None) -> Tuple[str, float]:
-        """Call LLM with Chain-of-Thought reasoning (hidden from user)"""
+    def _call_llm_with_cot(self, text: str, context: Dict[str, Any] = None, llm_suggestion: str = None) -> Tuple[str, float]:
+        """Call LLM with Chain-of-Thought reasoning (context-aware, less sensitive)"""
         # Build context from previous stages
         context_info = ""
         if context:
             for stage_name, result in context.items():
                 context_info += f"\n{stage_name}: {result.reason}"
         
+        # If the post matches the LLM's own suggestion, add a note to the prompt
+        suggestion_note = ""
+        if llm_suggestion and text.strip().lower() == llm_suggestion.strip().lower():
+            suggestion_note = "\nNote: The user is submitting a post that matches the LLM's previous suggestion. Only block if there are additional clear signs of fraud or manipulation."
+        
         prompt = f"""
-You are a sophisticated scammer analyzing a social media post. Think step-by-step:
+You are a financial content moderator (financial police) for a social media platform. Your job is to protect users from scams, fraud, and misleading financial posts, but also to allow normal, safe financial discussion.
 
 Post: "{text}"
 
 Previous stage results:{context_info}
+{suggestion_note}
 
-Step-by-step analysis:
-1. What is the main intent of this post?
-2. Does it contain financial promises or guarantees?
-3. Is there urgency or pressure tactics?
-4. Would this be effective for fraud/scams?
-5. Are there any red flags I would recognize as a scammer?
-
-After your analysis, respond with ONLY "FRAUD" or "CLEAN" (no explanation).
+Instructions:
+1. Only block posts with clear signs of fraud, deception, manipulation, or illegal activity (e.g., guaranteed returns, urgency, impersonation, fake endorsements, phishing, selling illegal goods, etc).
+2. Do NOT block posts just for mentioning finance, investment, trading, or similar generic terms.
+3. If the post is a simple, harmless financial question or statement, allow it.
+4. If the post matches your own previous suggestion, only block if there are additional scammy elements.
+5. Think step-by-step, but respond ONLY with "FRAUD" or "CLEAN" (no explanation).
 """
         
         try:
@@ -642,8 +647,12 @@ After your analysis, respond with ONLY "FRAUD" or "CLEAN" (no explanation).
             return "ERROR", 0.5
     
     def process(self, text: str, context: Dict[str, Any] = None) -> ModerationResult:
-        """Process escalation with LLM Chain-of-Thought"""
-        decision, confidence = self._call_llm_with_cot(text, context)
+        """Process escalation with LLM Chain-of-Thought (context-aware, less sensitive)"""
+        # Try to get the LLM suggestion from context if available
+        llm_suggestion = None
+        if context and "llm_suggestion" in context:
+            llm_suggestion = context["llm_suggestion"]
+        decision, confidence = self._call_llm_with_cot(text, context, llm_suggestion)
         
         if decision == "FRAUD":
             return ModerationResult(
@@ -693,7 +702,7 @@ class ModerationPipeline:
             # Stop processing if decision is BLOCK
             if result.decision == "BLOCK":
                 logger.info(f"Content blocked at {stage.stage_name}: {result.reason}")
-        return result
+                return result
             # Continue to next stage for ACCEPT or ESCALATE
             context[stage.stage_name] = result
         
