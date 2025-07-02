@@ -24,8 +24,8 @@ print("DEBUG: GROQ_API_KEY is:", os.getenv("GROQ_API_KEY"))
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# ---- Import your moderation engine! ----
-from app.core.moderation import GuardianModerationEngine
+# ---- Import your new modular moderation pipeline! ----
+from app.core.moderation import create_default_pipeline, ModerationResult
 
 DATABASE_URL = "sqlite:///./moderation.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
@@ -38,11 +38,12 @@ class Post(Base):
     content = Column(Text, nullable=False)
     accepted = Column(Boolean, nullable=False)
     reason = Column(Text, nullable=False)
-    threat_level = Column(String, default="low")
-    confidence = Column(String, default="1.0")
+    decision = Column(String, default="ACCEPT")
     stage = Column(String, default="unknown")
-    band = Column(String, default="SAFE")
+    confidence = Column(String, default="1.0")
+    threat_level = Column(String, default="low")
     action = Column(String, default="PASS")
+    financial_risk_band = Column(String, default="low")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     llm_explanation = Column(Text, default="")
     llm_troublesome_words = Column(Text, default="")
@@ -52,8 +53,8 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="GuardianAI Content Moderation API",
-    version="2.0.0",
-    description="Multilayered moderation pipeline with LLM escalation"
+    version="3.0.0",
+    description="Modular multi-stage moderation pipeline with LLM escalation"
 )
 app.add_middleware(
     CORSMiddleware,
@@ -67,22 +68,26 @@ class ModerationRequest(BaseModel):
     content: str
 
 class ModerationResponse(BaseModel):
-    accepted: bool
-    reason: str
-    id: int
-    threat_level: str = "low"
+    decision: str  # ACCEPT, BLOCK, ESCALATE
+    stage: str     # stage1, stage2, stage3a, stage3b, llm
+    reason: str    # rule_name_or_model
     confidence: float = 1.0
-    stage: str = "unknown"
-    band: str = "SAFE"
-    action: str = "PASS"
+    threat_level: str = "low"
+    accepted: bool = True
+    id: int = 0
     explanation: str = ""
     troublesome_words: list = []
     suggestion: str = ""
+    action: str = ""
+    financial_risk_band: str = ""
 
-# ---- Real moderation engine ----
-moderation_engine = GuardianModerationEngine()
+# ---- Initialize the new modular pipeline ----
+moderation_pipeline = create_default_pipeline(
+    keywords_file="data/external/words.json",
+    groq_api_key=os.getenv("GROQ_API_KEY")
+)
 
-# ---- LLM Utility ----
+# ---- LLM Utility for additional explanation (optional) ----
 def get_llm_explanation_and_suggestion(post_text):
     prompt = f"""
 A user's social media post was flagged as inappropriate.
@@ -127,7 +132,15 @@ Respond only in JSON as follows:
             content = resp_json["choices"][0]["message"]["content"]
             try:
                 import json as _json
-                parsed = _json.loads(content)
+                # Try to extract JSON from the response (handle cases where LLM formats the response)
+                content_clean = content.strip()
+                if content_clean.startswith("Here is the response in JSON format:"):
+                    # Remove the prefix and extract just the JSON part
+                    json_start = content_clean.find("{")
+                    if json_start != -1:
+                        content_clean = content_clean[json_start:]
+                
+                parsed = _json.loads(content_clean)
                 return (
                     parsed.get("explanation", ""),
                     parsed.get("troublesome_words", []),
@@ -168,58 +181,72 @@ def root():
     return {
         "message": "GuardianAI Content Moderation API",
         "status": "running",
-        "version": "2.0.0",
-        "models": moderation_engine.get_model_status()
+        "version": "3.0.0",
+        "pipeline_stages": len(moderation_pipeline.stages),
+        "stage_names": [stage.stage_name for stage in moderation_pipeline.stages]
     }
 
 @app.get("/health")
 def health():
     return {
         "status": "healthy",
-        "models": moderation_engine.get_model_status()
+        "pipeline_stages": len(moderation_pipeline.stages),
+        "stage_names": [stage.stage_name for stage in moderation_pipeline.stages]
     }
 
 @app.post("/moderate", response_model=ModerationResponse)
 def moderate_post(request: ModerationRequest):
+    """Main moderation endpoint using new modular pipeline"""
     try:
-        result = moderation_engine.moderate_content(request.content)
+        # Process through the modular pipeline
+        result = moderation_pipeline.process(request.content)
+        
+        # Get additional LLM explanation if content was blocked
         llm_explanation, llm_troublesome_words, llm_suggestion = "", [], ""
-
-        # Call LLM only if blocked or flagged by *any* strict action (FLAG, BLOCK, etc)
-        if result.action.upper() in ("BLOCK", "FLAG", "FLAG_LOW", "FLAG_MEDIUM", "FLAG_HIGH"):
+        if result.decision == "BLOCK":
             llm_explanation, llm_troublesome_words, llm_suggestion = get_llm_explanation_and_suggestion(request.content)
-
-        import json as _json
+        
+        # Determine if content is accepted based on decision
+        accepted = result.decision == "ACCEPT"
+        
+        # Set action and financial risk band
+        action = "REJECT" if result.decision == "BLOCK" else ("ESCALATE" if result.decision == "ESCALATE" else "PASS")
+        financial_risk_band = result.threat_level if hasattr(result, "threat_level") else "low"
+        
+        # Save to DB
         db = SessionLocal()
         post = Post(
             content=request.content,
-            accepted=result.accepted,
+            accepted=accepted,
             reason=result.reason,
-            threat_level=result.threat_level,
-            confidence=str(result.confidence),
+            decision=result.decision,
             stage=result.stage,
-            band=result.band,
-            action=result.action,
+            confidence=str(result.confidence),
+            threat_level=result.threat_level,
+            action=action,
+            financial_risk_band=financial_risk_band,
             llm_explanation=llm_explanation,
-            llm_troublesome_words=_json.dumps(llm_troublesome_words),
+            llm_troublesome_words=str(llm_troublesome_words),
             llm_suggestion=llm_suggestion
         )
         db.add(post)
         db.commit()
         db.refresh(post)
         db.close()
+        
         return ModerationResponse(
-            accepted=result.accepted,
-            reason=result.reason,
-            id=post.id,
-            threat_level=result.threat_level,
-            confidence=float(result.confidence),
+            decision=result.decision,
             stage=result.stage,
-            band=result.band,
-            action=result.action,
+            reason=result.reason,
+            confidence=result.confidence,
+            threat_level=result.threat_level,
+            accepted=accepted,
+            id=post.id,
             explanation=llm_explanation,
             troublesome_words=llm_troublesome_words,
-            suggestion=llm_suggestion
+            suggestion=llm_suggestion,
+            action=action,
+            financial_risk_band=financial_risk_band
         )
     except Exception as e:
         logger.error(f"Moderation error: {e}")
@@ -227,8 +254,8 @@ def moderate_post(request: ModerationRequest):
 
 @app.get("/posts")
 def get_posts():
+    """Get all moderated posts"""
     try:
-        import json as _json
         db = SessionLocal()
         posts = db.query(Post).order_by(Post.created_at.desc()).all()
         db.close()
@@ -236,17 +263,12 @@ def get_posts():
             {
                 "id": post.id,
                 "content": post.content,
-                "accepted": post.accepted,
+                "status": "Rejected" if post.decision == "BLOCK" else ("Needs Review" if post.decision == "ESCALATE" else "Safe"),
+                "band": post.financial_risk_band,
+                "action": post.action,
+                "confidence": post.confidence,
                 "reason": post.reason,
-                "threat_level": post.threat_level,
-                "confidence": float(post.confidence) if post.confidence else 1.0,
-                "stage": post.stage,
-                "band": getattr(post, 'band', 'SAFE'),
-                "action": getattr(post, 'action', 'PASS'),
-                "llm_explanation": post.llm_explanation,
-                "llm_troublesome_words": _json.loads(post.llm_troublesome_words or "[]"),
-                "llm_suggestion": post.llm_suggestion,
-                "created_at": post.created_at.isoformat()
+                "created_at": post.created_at,
             }
             for post in posts
         ]
@@ -256,31 +278,61 @@ def get_posts():
 
 @app.get("/stats")
 def get_stats():
+    """Get moderation statistics"""
     try:
         db = SessionLocal()
         from sqlalchemy import func
         total_posts = db.query(Post).count()
         accepted_posts = db.query(Post).filter(Post.accepted == True).count()
         rejected_posts = total_posts - accepted_posts
-        reason_stats = db.query(
+        
+        # Get stats by decision type
+        decision_stats = db.query(
+            Post.decision, func.count(Post.id).label('count')
+        ).group_by(Post.decision).all()
+        
+        # Get stats by stage
+        stage_stats = db.query(
             Post.stage, func.count(Post.id).label('count')
-        ).filter(Post.accepted == False).group_by(Post.stage).all()
+        ).group_by(Post.stage).all()
+        
+        # Get stats by threat level
         threat_stats = db.query(
             Post.threat_level, func.count(Post.id).label('count')
         ).group_by(Post.threat_level).all()
+        
         db.close()
+        
         return {
             "total_posts": total_posts,
             "accepted": accepted_posts,
             "rejected": rejected_posts,
             "acceptance_rate": round((accepted_posts / total_posts * 100), 2) if total_posts > 0 else 0,
-            "rejection_by_stage": {stat.stage: stat.count for stat in reason_stats},
+            "decisions": {stat.decision: stat.count for stat in decision_stats},
+            "stages": {stat.stage: stat.count for stat in stage_stats},
             "threat_levels": {stat.threat_level: stat.count for stat in threat_stats},
-            "models": moderation_engine.get_model_status()
+            "pipeline_info": {
+                "total_stages": len(moderation_pipeline.stages),
+                "stage_names": [stage.stage_name for stage in moderation_pipeline.stages]
+            }
         }
     except Exception as e:
         logger.error(f"Stats error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/pipeline/stages")
+def get_pipeline_stages():
+    """Get information about the pipeline stages"""
+    return {
+        "total_stages": len(moderation_pipeline.stages),
+        "stages": [
+            {
+                "name": stage.stage_name,
+                "type": type(stage).__name__
+            }
+            for stage in moderation_pipeline.stages
+        ]
+    }
 
 if __name__ == "__main__":
     import uvicorn
