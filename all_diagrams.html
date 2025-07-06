@@ -184,26 +184,27 @@
 <body>
     <div class="container">
         <header>
-            <h1>🛡️ Content Moderation Engine v2.0</h1>
-            <p class="subtitle">Enhanced Architecture with FinBERT 5-Layer Band System</p>
+            <h1>🛡️ Content Moderation Engine v3.0</h1>
+            <p class="subtitle">Complete 5-Stage Modular Pipeline with LLM Integration</p>
             <div style="margin: 15px 0;">
-                <span class="upgrade-badge">🎯 FinBERT Bands</span>
-                <span class="upgrade-badge">📊 Action Classification</span>
-                <span class="upgrade-badge">🎨 Enhanced UI</span>
-                <span class="upgrade-badge">💾 Extended Database</span>
+                <span class="upgrade-badge">🔧 5-Stage Pipeline</span>
+                <span class="upgrade-badge">🧠 LLM Integration</span>
+                <span class="upgrade-badge">🎯 CiferAI Fraud Detection</span>
+                <span class="upgrade-badge">⚠️ Error Handling</span>
+                <span class="upgrade-badge">📊 Comprehensive Analytics</span>
             </div>
             <div class="stats">
                 <div class="stat-item">
-                    <span class="stat-number">7</span>
-                    <span class="stat-label">Updated Diagrams</span>
+                    <span class="stat-number">14</span>
+                    <span class="stat-label">Complete Diagrams</span>
                 </div>
                 <div class="stat-item">
                     <span class="stat-number">5</span>
-                    <span class="stat-label">Risk Bands</span>
+                    <span class="stat-label">Pipeline Stages</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-number">3</span>
-                    <span class="stat-label">AI Stages</span>
+                    <span class="stat-number">4</span>
+                    <span class="stat-label">AI Models</span>
                 </div>
                 <div class="stat-item">
                     <span class="stat-number">2736</span>
@@ -726,6 +727,516 @@ flowchart TD
     style VisualFeedback fill:#e8f5e8
             </div>
         </div>
+
+        <!-- Diagram 8: Complete Multi-Stage Moderation Pipeline -->
+        <div class="diagram-container">
+            <h2 class="diagram-title">🔧 Complete Multi-Stage Moderation Pipeline v3.0<span class="new-feature">CURRENT SYSTEM</span></h2>
+            <div class="diagram-description">
+                <strong>Current 5-stage modular pipeline</strong> with lexical filtering, toxicity detection, sentiment analysis, fraud classification, and LLM escalation with chain-of-thought reasoning.
+            </div>
+            <div class="mermaid">
+graph TD
+    A["🛡️ ModerationPipeline.process()"] --> B["📝 Input: Content String"]
+    
+    B --> C["🔴 Stage 1: Lexical Filter<br/>Stage1LexicalFilter"]
+    C --> D["📚 Load 2,736 keywords<br/>data/external/words.json"]
+    D --> E["🔍 Fuzzy keyword matching<br/>Whole word + case insensitive"]
+    E --> F["🎯 Regex pattern matching<br/>Crypto addresses, URLs, threats"]
+    F --> G{"❓ Rule violations?"}
+    
+    G -->|Yes| H["❌ BLOCK<br/>decision='BLOCK'<br/>stage='stage1'<br/>confidence=0.8-1.0"]
+    
+    G -->|No| I["🟡 Stage 2: Toxicity Check<br/>Stage2ToxicityCheck"]
+    I --> J["🤖 Detoxify Model<br/>unitary/toxic-bert"]
+    J --> K["🧠 Toxicity classification<br/>Score (0-1)"]
+    K --> L{"🎚️ Score > 0.5?"}
+    
+    L -->|Yes| M["❌ BLOCK<br/>decision='BLOCK'<br/>stage='stage2'<br/>confidence=score"]
+    
+    L -->|No| N["🟢 Stage 3a: Sentiment Sentinels<br/>Stage3aSentimentSentinels"]
+    N --> O["💰 FinBERT Model<br/>ProsusAI/finbert"]
+    O --> P["📈 Financial sentiment analysis<br/>positive/negative/neutral"]
+    P --> Q["📊 Store sentiment in context<br/>metadata for Stage 3b"]
+    Q --> R["✅ ACCEPT/CONTINUE<br/>Pass to next stage"]
+    
+    R --> S["🔍 Stage 3b: Fraud Classifier<br/>Stage3bFraudClassifier"]
+    S --> T["🎯 CiferAI Model<br/>CiferAI/cifer-fraud-detection"]
+    T --> U["🔧 Heuristic fraud detection<br/>Patterns + rules"]
+    U --> V["📊 Ensemble voting<br/>Combine scores"]
+    V --> W{"🎲 Fraud probability?"}
+    
+    W -->|High| X["❌ BLOCK<br/>decision='BLOCK'<br/>stage='stage3b'<br/>confidence=score"]
+    W -->|Medium| Y["⚠️ ESCALATE<br/>decision='ESCALATE'<br/>stage='stage3b'<br/>confidence=score"]
+    W -->|Low| Z["✅ ACCEPT/CONTINUE<br/>Pass to LLM stage"]
+    
+    Z --> AA["🧠 LLM Escalation<br/>LLMEscalation"]
+    AA --> BB["🔗 Chain-of-Thought reasoning<br/>Context from all stages"]
+    BB --> CC["🤖 Groq API call<br/>llama3-8b-8192"]
+    CC --> DD["🎯 LLM decision<br/>FRAUD/CLEAN/UNCERTAIN"]
+    DD --> EE{"🧠 LLM result?"}
+    
+    EE -->|FRAUD| FF["❌ BLOCK<br/>decision='BLOCK'<br/>stage='llm'<br/>confidence=0.9"]
+    EE -->|CLEAN| GG["✅ ACCEPT<br/>decision='ACCEPT'<br/>stage='llm'<br/>confidence=0.9"]
+    EE -->|UNCERTAIN| HH["❌ BLOCK<br/>decision='BLOCK'<br/>stage='llm'<br/>confidence=0.5"]
+    
+    H --> II["📊 Return ModerationResult"]
+    M --> II
+    X --> II
+    Y --> II
+    FF --> II
+    GG --> II
+    HH --> II
+    
+    II --> JJ["💾 Database storage<br/>Post model with metadata"]
+    JJ --> KK["📤 API response<br/>ModerationResponse"]
+    
+    style C fill:#ffebee
+    style I fill:#e8f5e8
+    style N fill:#fff8e1
+    style S fill:#e1f5fe
+    style AA fill:#f3e5f5
+    style H fill:#ffcdd2
+    style M fill:#ffcdd2
+    style X fill:#ffcdd2
+    style Y fill:#ffe0b3
+    style FF fill:#ffcdd2
+    style GG fill:#c8e6c9
+    style HH fill:#ffcdd2
+    style JJ fill:#e3f2fd
+            </div>
+        </div>
+
+        <!-- Diagram 9: API Architecture and Endpoints -->
+        <div class="diagram-container">
+            <h2 class="diagram-title">🌐 FastAPI Architecture & Endpoints<span class="new-feature">COMPREHENSIVE</span></h2>
+            <div class="diagram-description">
+                <strong>Complete API structure</strong> with all endpoints, request/response models, database integration, and pipeline processing.
+            </div>
+            <div class="mermaid">
+graph TD
+    A["🚀 FastAPI Application<br/>main.py"] --> B["🔧 CORS Middleware<br/>allow_origins=['*']"]
+    B --> C["📋 Database Setup<br/>SQLite + SQLAlchemy"]
+    C --> D["🛡️ Pipeline Initialization<br/>create_default_pipeline()"]
+    
+    D --> E["🌐 API Endpoints"]
+    
+    E --> F["🏠 GET /<br/>System status & info"]
+    E --> G["🏥 GET /health<br/>Health check"]
+    E --> H["🛡️ POST /moderate<br/>Main moderation endpoint"]
+    E --> I["📋 GET /posts<br/>Retrieve all posts"]
+    E --> J["📊 GET /stats<br/>System statistics"]
+    E --> K["🔧 GET /pipeline/stages<br/>Pipeline information"]
+    
+    H --> L["📝 ModerationRequest<br/>content: str"]
+    L --> M["🛡️ Pipeline Processing<br/>moderation_pipeline.process()"]
+    M --> N["🤖 LLM Explanation<br/>get_llm_explanation_and_suggestion()"]
+    N --> O["💾 Database Storage<br/>Post model creation"]
+    O --> P["📤 ModerationResponse<br/>decision, stage, reason, etc."]
+    
+    I --> Q["🗄️ Database Query<br/>Post.query().order_by(created_at.desc())"]
+    Q --> R["📋 Posts Array<br/>JSON response"]
+    
+    J --> S["📊 Statistics Calculation<br/>Total, accepted, rejected"]
+    S --> T["📈 Advanced Stats<br/>By decision, stage, threat level"]
+    T --> U["📊 Stats Response<br/>JSON with analytics"]
+    
+    V["🗄️ Database Models"] --> W["📄 Post Table<br/>- id, content, accepted<br/>- decision, stage, confidence<br/>- threat_level, action<br/>- financial_risk_band<br/>- llm_explanation, etc."]
+    
+    X["🔑 Environment Variables"] --> Y["🤖 GROQ_API_KEY<br/>LLM integration"]
+    Y --> Z["🔐 ModerationAPP<br/>CiferAI token"]
+    
+    W --> O
+    N --> AA["🌐 Groq API<br/>llama3-8b-8192"]
+    AA --> BB["📝 Chain-of-Thought<br/>JSON response"]
+    
+    style A fill:#e1f5fe
+    style D fill:#fff3e0
+    style E fill:#f3e5f5
+    style H fill:#fff8e1
+    style M fill:#ffebee
+    style N fill:#e8f5e8
+    style O fill:#e3f2fd
+    style W fill:#f3e5f5
+    style AA fill:#e1f5fe
+            </div>
+        </div>
+
+        <!-- Diagram 10: Database Schema and Data Flow -->
+        <div class="diagram-container">
+            <h2 class="diagram-title">💾 Database Schema & Data Flow<span class="new-feature">DETAILED</span></h2>
+            <div class="diagram-description">
+                <strong>Complete database design</strong> with Post model structure, data relationships, and statistics generation flow.
+            </div>
+            <div class="mermaid">
+graph TD
+    A["🗄️ SQLite Database<br/>moderation.db"] --> B["📄 Post Table Schema"]
+    
+    B --> C["🆔 Primary Key<br/>id: Integer (auto-increment)"]
+    B --> D["📝 Content Fields<br/>content: Text (not null)"]
+    B --> E["✅ Decision Fields<br/>accepted: Boolean<br/>decision: String (ACCEPT/BLOCK/ESCALATE)"]
+    B --> F["🔧 Processing Fields<br/>stage: String<br/>reason: Text<br/>confidence: String"]
+    B --> G["⚠️ Risk Assessment<br/>threat_level: String<br/>action: String<br/>financial_risk_band: String"]
+    B --> H["🤖 LLM Fields<br/>llm_explanation: Text<br/>llm_troublesome_words: Text<br/>llm_suggestion: Text"]
+    B --> I["⏰ Timestamp<br/>created_at: DateTime"]
+    
+    J["📤 Moderation Request"] --> K["🛡️ Pipeline Processing"]
+    K --> L["📊 ModerationResult"]
+    L --> M["🤖 LLM Enhancement<br/>get_llm_explanation_and_suggestion()"]
+    M --> N["🏗️ Post Creation"]
+    
+    N --> O["💾 Database Insert<br/>SessionLocal()"]
+    O --> P["🔄 Commit Transaction"]
+    P --> Q["🔄 Refresh for ID"]
+    Q --> R["📤 Response Generation"]
+    
+    S["📊 Statistics Queries"] --> T["📈 Basic Stats<br/>COUNT(), GROUP BY"]
+    T --> U["🎯 Decision Breakdown<br/>ACCEPT/BLOCK/ESCALATE counts"]
+    U --> V["🏷️ Stage Analysis<br/>stage1/stage2/stage3a/stage3b/llm"]
+    V --> W["⚠️ Threat Level Distribution<br/>low/medium/high"]
+    W --> X["📊 Pipeline Information<br/>Total stages, stage names"]
+    
+    Y["📋 Posts Retrieval"] --> Z["📑 ORDER BY created_at DESC"]
+    Z --> AA["📤 JSON Response<br/>Array of posts"]
+    
+    BB["🔧 Database Operations"] --> CC["📝 Create (INSERT)"]
+    BB --> DD["📖 Read (SELECT)"]
+    BB --> EE["📊 Aggregate (COUNT, GROUP BY)"]
+    
+    style A fill:#e3f2fd
+    style B fill:#f3e5f5
+    style K fill:#fff3e0
+    style L fill:#fff8e1
+    style M fill:#e8f5e8
+    style N fill:#e1f5fe
+    style O fill:#e3f2fd
+    style S fill:#fce4ec
+    style T fill:#f1f8e9
+    style Y fill:#fff3e0
+            </div>
+        </div>
+
+        <!-- Diagram 11: Frontend-Backend Interaction Flow -->
+        <div class="diagram-container">
+            <h2 class="diagram-title">🖥️ Frontend-Backend User Journey<span class="new-feature">INTERACTIVE</span></h2>
+            <div class="diagram-description">
+                <strong>Complete user interaction flow</strong> from content submission through processing to result display with enhanced UI feedback.
+            </div>
+            <div class="mermaid">
+sequenceDiagram
+    participant User as 👤 User
+    participant Frontend as 🌐 Frontend<br/>(index.html)
+    participant API as ⚡ FastAPI Server<br/>(main.py)
+    participant Pipeline as 🛡️ Moderation Pipeline<br/>(5 stages)
+    participant LLM as 🤖 LLM Service<br/>(Groq API)
+    participant DB as 💾 Database<br/>(SQLite)
+    
+    User->>Frontend: 📝 Enter content in textarea
+    User->>Frontend: 🚀 Click "Submit for Moderation"
+    
+    Frontend->>Frontend: ✅ Validate input (not empty)
+    Frontend->>Frontend: 🔄 Show loading state
+    Frontend->>API: 📤 POST /moderate<br/>{"content": "user text"}
+    
+    API->>Pipeline: 🛡️ moderation_pipeline.process(content)
+    
+    Pipeline->>Pipeline: 🔴 Stage 1: Lexical Filter
+    Pipeline->>Pipeline: 🟡 Stage 2: Toxicity Check
+    Pipeline->>Pipeline: 🟢 Stage 3a: Sentiment Analysis
+    Pipeline->>Pipeline: 🔍 Stage 3b: Fraud Detection
+    Pipeline->>Pipeline: 🧠 LLM Escalation
+    
+    Pipeline-->>API: 📊 ModerationResult
+    
+    alt Content was blocked
+        API->>LLM: 🤖 get_llm_explanation_and_suggestion()
+        LLM-->>API: 📝 Explanation, words, suggestion
+    end
+    
+    API->>DB: 💾 Save Post with all metadata
+    DB-->>API: 🆔 Return post ID
+    
+    API-->>Frontend: 📤 ModerationResponse<br/>{decision, stage, reason, confidence, etc.}
+    
+    Frontend->>Frontend: 🎨 Display result with styling
+    Frontend->>Frontend: 📊 Show confidence bars
+    Frontend->>Frontend: 🏷️ Display risk bands and actions
+    
+    alt Show explanation for blocked content
+        Frontend->>Frontend: 💡 Display LLM explanation
+        Frontend->>Frontend: 🔍 Highlight troublesome words
+        Frontend->>Frontend: 💭 Show suggested alternative
+    end
+    
+    Frontend->>API: 📋 GET /posts (refresh table)
+    API->>DB: 🔍 Query recent posts
+    DB-->>API: 📄 Posts array
+    API-->>Frontend: 📋 Posts with metadata
+    
+    Frontend->>Frontend: 📊 Update posts table
+    Frontend->>Frontend: 🎯 Show band badges
+    Frontend->>Frontend: ⏰ Display timestamps
+    
+    Frontend->>API: 📈 GET /stats (update statistics)
+    API->>DB: 📊 Calculate statistics
+    DB-->>API: 📈 Stats data
+    API-->>Frontend: 📊 Statistics response
+    
+    Frontend->>Frontend: 📈 Update stats display
+    Frontend->>Frontend: 📊 Show acceptance rates
+    Frontend->>Frontend: 🎯 Display stage breakdown
+    
+    Note over User,DB: Complete moderation cycle<br/>with 5-stage pipeline & LLM enhancement
+            </div>
+        </div>
+
+        <!-- Diagram 12: System Architecture Overview -->
+        <div class="diagram-container">
+            <h2 class="diagram-title">🏗️ Complete System Architecture v3.0<span class="new-feature">COMPREHENSIVE</span></h2>
+            <div class="diagram-description">
+                <strong>Full system architecture</strong> showing all components, layers, data flows, and integrations in the current GuardianAI system.
+            </div>
+            <div class="mermaid">
+graph TB
+    subgraph "🌐 Frontend Layer"
+        A["🖥️ HTML5 Interface<br/>index.html"]
+        B["⚛️ React App<br/>material-ui-app<br/>(Basic template)"]
+    end
+    
+    subgraph "🔌 API Layer"
+        C["⚡ FastAPI Server<br/>main.py"]
+        D["🛡️ POST /moderate<br/>Main processing"]
+        E["📋 GET /posts<br/>Data retrieval"]
+        F["📊 GET /stats<br/>Analytics"]
+        G["🏥 GET /health<br/>Status check"]
+        H["🔧 GET /pipeline/stages<br/>Pipeline info"]
+    end
+    
+    subgraph "🛡️ Moderation Engine"
+        I["🔴 Stage 1: Lexical Filter<br/>Keywords + Regex"]
+        J["🟡 Stage 2: Toxicity Check<br/>Detoxify (unitary/toxic-bert)"]
+        K["🟢 Stage 3a: Sentiment Analysis<br/>FinBERT (ProsusAI/finbert)"]
+        L["🔍 Stage 3b: Fraud Detection<br/>CiferAI + Heuristics"]
+        M["🧠 LLM Escalation<br/>Chain-of-Thought"]
+    end
+    
+    subgraph "🤖 AI Models & Services"
+        N["🧠 Detoxify Model<br/>Text Classification"]
+        O["💰 FinBERT Model<br/>Financial Sentiment"]
+        P["🎯 CiferAI Model<br/>Fraud Detection"]
+        Q["🤖 Groq API<br/>llama3-8b-8192"]
+    end
+    
+    subgraph "💾 Data Layer"
+        R["🗄️ SQLite Database<br/>moderation.db"]
+        S["📄 Post Table<br/>Complete metadata"]
+        T["📁 Keywords File<br/>data/external/words.json<br/>2,736 terms"]
+    end
+    
+    subgraph "🔧 Configuration"
+        U["⚙️ Environment Variables<br/>GROQ_API_KEY, ModerationAPP"]
+        V["🔑 API Keys<br/>External services"]
+        W["📊 Thresholds<br/>Toxicity, confidence, etc."]
+    end
+    
+    subgraph "🔄 Data Flow"
+        X["📥 Input Processing"]
+        Y["🛡️ Multi-Stage Analysis"]
+        Z["📊 Result Generation"]
+        AA["💾 Data Persistence"]
+        BB["📤 Response Delivery"]
+    end
+    
+    A --> C
+    B --> C
+    C --> D
+    D --> I
+    I --> J
+    J --> K
+    K --> L
+    L --> M
+    
+    J --> N
+    K --> O
+    L --> P
+    M --> Q
+    
+    D --> R
+    R --> S
+    I --> T
+    
+    Q --> U
+    P --> V
+    N --> W
+    
+    X --> Y
+    Y --> Z
+    Z --> AA
+    AA --> BB
+    
+    style A fill:#e1f5fe
+    style C fill:#f3e5f5
+    style D fill:#fff8e1
+    style I fill:#ffebee
+    style J fill:#e8f5e8
+    style K fill:#fff8e1
+    style L fill:#e1f5fe
+    style M fill:#f3e5f5
+    style N fill:#e8f5e8
+    style R fill:#e3f2fd
+    style S fill:#f3e5f5
+    style T fill:#fff3e0
+            </div>
+        </div>
+
+        <!-- Diagram 13: Error Handling and Escalation Flow -->
+        <div class="diagram-container">
+            <h2 class="diagram-title">⚠️ Error Handling & Escalation Flow<span class="new-feature">RESILIENT</span></h2>
+            <div class="diagram-description">
+                <strong>Comprehensive error handling</strong> with graceful degradation, fallback mechanisms, and escalation paths for model failures.
+            </div>
+            <div class="mermaid">
+graph TD
+    A["🛡️ Pipeline Processing Start"] --> B["📝 Content Input"]
+    
+    B --> C["🔴 Stage 1: Lexical Filter"]
+    C --> D{"❓ Keywords file load error?"}
+    D -->|Yes| E["⚠️ Log warning<br/>Use fallback keywords"]
+    D -->|No| F["✅ Process with full keywords"]
+    E --> F
+    
+    F --> G["🟡 Stage 2: Toxicity Check"]
+    G --> H{"❓ Detoxify model error?"}
+    H -->|Yes| I["⚠️ Log warning<br/>Skip toxicity check<br/>Continue pipeline"]
+    H -->|No| J["✅ Process with Detoxify"]
+    I --> K["🟢 Stage 3a: Sentiment Analysis"]
+    J --> K
+    
+    K --> L{"❓ FinBERT model error?"}
+    L -->|Yes| M["⚠️ Log warning<br/>Skip sentiment analysis<br/>Continue pipeline"]
+    L -->|No| N["✅ Process with FinBERT"]
+    M --> O["🔍 Stage 3b: Fraud Detection"]
+    N --> O
+    
+    O --> P{"❓ CiferAI model error?"}
+    P -->|Yes| Q["⚠️ Fallback to heuristics<br/>Log CiferAI failure"]
+    P -->|No| R["✅ Process with CiferAI"]
+    Q --> S["🔧 Enhanced heuristic detection"]
+    R --> S
+    
+    S --> T["🧠 LLM Escalation"]
+    T --> U{"❓ Groq API error?"}
+    U -->|Yes| V["⚠️ API timeout/failure<br/>Log LLM error"]
+    U -->|No| W["✅ Process with LLM"]
+    
+    V --> X["🔄 Default safe behavior<br/>Return conservative result"]
+    W --> Y["📊 Generate ModerationResult"]
+    X --> Y
+    
+    Y --> Z["💾 Database Storage"]
+    Z --> AA{"❓ Database error?"}
+    AA -->|Yes| BB["❌ HTTPException 500<br/>Log database error"]
+    AA -->|No| CC["✅ Store successfully"]
+    
+    DD["🚨 Error Types"] --> EE["🔌 Network errors<br/>API timeouts"]
+    DD --> FF["🤖 Model loading failures<br/>Memory issues"]
+    DD --> GG["🗄️ Database connection errors<br/>Disk space issues"]
+    DD --> HH["🔑 Authentication failures<br/>Invalid API keys"]
+    
+    II["📋 Logging Strategy"] --> JJ["⚠️ Warning level<br/>Model failures"]
+    II --> KK["❌ Error level<br/>Critical failures"]
+    II --> LL["📊 Info level<br/>Successful operations"]
+    
+    MM["🔄 Fallback Mechanisms"] --> NN["🔧 Heuristic-only processing<br/>When AI models fail"]
+    MM --> OO["⚙️ Default safe responses<br/>Conservative decisions"]
+    MM --> PP["📝 Detailed error logging<br/>For debugging"]
+    
+    style A fill:#e1f5fe
+    style C fill:#ffebee
+    style G fill:#e8f5e8
+    style K fill:#fff8e1
+    style O fill:#e1f5fe
+    style T fill:#f3e5f5
+    style E fill:#fff3cd
+    style I fill:#fff3cd
+    style M fill:#fff3cd
+    style Q fill:#fff3cd
+    style V fill:#fff3cd
+    style X fill:#ffe0b3
+    style BB fill:#ffcdd2
+    style DD fill:#c8e6c9
+            </div>
+        </div>
+
+        <!-- Diagram 14: LLM Integration and Chain-of-Thought -->
+        <div class="diagram-container">
+            <h2 class="diagram-title">🧠 LLM Integration & Chain-of-Thought<span class="new-feature">INTELLIGENT</span></h2>
+            <div class="diagram-description">
+                <strong>Advanced LLM integration</strong> with chain-of-thought reasoning, context awareness, and dual-purpose explanations for blocked content.
+            </div>
+            <div class="mermaid">
+graph TD
+    A["🧠 LLM Integration Points"] --> B["🛡️ Pipeline Escalation<br/>LLMEscalation stage"]
+    A --> C["💡 Content Explanation<br/>get_llm_explanation_and_suggestion()"]
+    
+    B --> D["🔗 Chain-of-Thought Process"]
+    D --> E["📊 Context Building<br/>Previous stage results"]
+    E --> F["📝 Prompt Engineering<br/>Financial police context"]
+    F --> G["🎯 Decision Criteria<br/>Fraud vs. normal content"]
+    G --> H["🤖 Groq API Call<br/>llama3-8b-8192"]
+    
+    H --> I["📤 LLM Response<br/>FRAUD/CLEAN/UNCERTAIN"]
+    I --> J{"🎯 Decision Processing"}
+    J -->|FRAUD| K["❌ BLOCK<br/>High confidence"]
+    J -->|CLEAN| L["✅ ACCEPT<br/>High confidence"]
+    J -->|UNCERTAIN| M["❌ BLOCK<br/>Conservative approach"]
+    
+    C --> N["📋 Explanation Generation"]
+    N --> O["📝 User-Friendly Language<br/>No technical jargon"]
+    O --> P["🔍 Problem Word Identification<br/>Exact phrases"]
+    P --> Q["💭 Alternative Suggestions<br/>Constructive feedback"]
+    Q --> R["📊 JSON Response<br/>Structured output"]
+    
+    S["🎛️ Prompt Engineering"] --> T["🔧 Context Awareness<br/>Previous stage results"]
+    S --> U["🎯 Role Definition<br/>Financial police"]
+    S --> V["📋 Clear Instructions<br/>Specific criteria"]
+    S --> W["🔄 Consistency<br/>Repeatable results"]
+    
+    X["⚙️ Configuration"] --> Y["🔑 API Key Management<br/>GROQ_API_KEY"]
+    X --> Z["📊 Model Settings<br/>llama3-8b-8192"]
+    X --> AA["🎚️ Temperature: 0.1<br/>Low variability"]
+    X --> BB["📏 Max tokens: 200<br/>Controlled output"]
+    
+    CC["🔄 Error Handling"] --> DD["⏱️ Timeout handling<br/>30 seconds"]
+    CC --> EE["🔄 Retry logic<br/>Graceful degradation"]
+    CC --> FF["📊 Fallback responses<br/>Default safe behavior"]
+    
+    GG["📊 Response Processing"] --> HH["📝 Text parsing<br/>Extract decisions"]
+    GG --> II["🎯 Confidence scoring<br/>0.9 for clear decisions"]
+    GG --> JJ["⚠️ Uncertainty handling<br/>Default to blocking"]
+    
+    KK["💡 Dual LLM Usage"] --> LL["🛡️ Moderation Decision<br/>In pipeline"]
+    KK --> MM["📝 User Explanation<br/>After blocking"]
+    KK --> NN["🎯 Different prompts<br/>Different purposes"]
+    
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style C fill:#fff8e1
+    style D fill:#e8f5e8
+    style H fill:#f3e5f5
+    style I fill:#fff3e0
+    style K fill:#ffcdd2
+    style L fill:#c8e6c9
+    style M fill:#ffcdd2
+    style N fill:#e8f5e8
+    style R fill:#c8e6c9
+    style S fill:#fff3e0
+    style X fill:#e3f2fd
+    style CC fill:#fff3cd
+    style GG fill:#f1f8e9
+    style KK fill:#e1f5fe
+            </div>
+        </div>
+
     </div>
 
     <button class="back-to-top" onclick="scrollToTop()">⬆️</button>
@@ -774,9 +1285,9 @@ flowchart TD
         }
 
         // Enhanced console logging
-        console.log('🎉 Enhanced Content Moderation Engine v2.0 - All Diagrams Loaded!');
-        console.log('📊 7 enhanced diagrams with 5-layer band system');
-        console.log('🎯 Features: Band classification, action mapping, confidence visualization');
+        console.log('🎉 Enhanced Content Moderation Engine v3.0 - All Diagrams Loaded!');
+        console.log('📊 14 comprehensive diagrams with 5-stage modular pipeline');
+        console.log('🎯 Features: Multi-stage processing, LLM integration, comprehensive error handling');
         console.log('🔄 Scroll to view all enhanced diagrams');
         
         // Add smooth scroll behavior for better UX
