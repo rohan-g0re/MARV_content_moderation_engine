@@ -1,6 +1,6 @@
 # 🛡️ GuardianAI Content Moderation Engine v2.0
 
-**AI-powered multi-stage content moderation pipeline with advanced ML fraud detection and financial risk assessment**
+**AI-powered multi-stage content moderation pipeline with advanced ML fraud detection, financial risk assessment, and LLM-powered feedback**
 
 ![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.8+-green.svg)
@@ -11,18 +11,20 @@
 
 ## 🎯 Executive Summary
 
-GuardianAI is a sophisticated content moderation system for financial companies requiring precise risk assessment. The moderation pipeline now features a dedicated ML layer for fraud/scam detection:
+GuardianAI is a sophisticated content moderation system for financial companies requiring precise risk assessment. The moderation pipeline now features a dedicated ML layer for fraud/scam detection and a Large Language Model (LLM) escalation/feedback layer:
 
 * **Stage 1: Rule-Based Filtering**: Instant detection using 2,736 keywords and advanced patterns
 * **Stage 2: ML Moderation Layer (LGBM)**: Custom trained fraud/scam classifier
 * **Stage 3: AI Toxicity Detection**: Deep learning model (Detoxify) for abusive/toxic language
 * **Stage 4: Financial Risk Assessment**: FinBERT-powered 5-layer band classification system
+* **Stage 5: LLM Escalation/Feedback**: Groq, FinGPT, or ChatGPT for explanations, suggestions, and final decision
 
 ### Key Benefits
 
 * ✅ **99.7% Accuracy** in financial fraud detection
 * ⚡ **Real-time Processing** with sub-second response times
-* 🎯 **Multi-layered filtering**: Rules + ML + AI models
+* 🎯 **Multi-layered filtering**: Rules + ML + AI models + LLM
+* 🦾 **LLM Feedback:** Human-like explanations and suggestions for flagged/blocked posts
 * 📊 **Comprehensive Analytics** with detailed reporting
 * 🔧 **Easy Integration** via REST API
 
@@ -56,19 +58,22 @@ graph TD
 
     P --> Q["💰 Stage 4: FinBERT AI<br/>5-Layer Band System"]
     Q --> R["📊 Band/Action"]
-
     R --> S["💾 Database"]
+    Q --> V["🦾 Stage 5: LLM Escalation/Feedback<br/>Groq/FinGPT/ChatGPT"]
+    V --> S
     S --> T["📊 Enhanced Response<br/>ModerationResponse v2.0"]
     T --> U["🔄 Updated Frontend"]
 
     style J fill:#fce4ec,stroke:#e91e63,stroke-width:2px
     style L fill:#ffe0b2
+    style V fill:#e3fcef,stroke:#38b000,stroke-width:2px
 ```
 
 > * **Stage 1:** Rule-based filters for obvious patterns
 > * **Stage 2 (ML):** LGBM classifier on scam/fraud/finance posts
 > * **Stage 3:** Detoxify for toxicity/abuse
 > * **Stage 4:** FinBERT for financial banding/risk
+> * **Stage 5 (LLM):** LLM-powered escalation and feedback (Groq, FinGPT, ChatGPT)
 
 ---
 
@@ -116,14 +121,35 @@ python backend/main.py
 
 ## 🔧 Technical Stack (Summary Table)
 
-| Component               | Technology          | Purpose                                    |
-| ----------------------- | ------------------- | ------------------------------------------ |
-| **Backend**             | FastAPI + Python    | Async API                                  |
-| **ML Moderation Layer** | LightGBM            | Custom fraud/scam classifier (retrainable) |
-| **AI Models**           | Detoxify + FinBERT  | Toxicity & financial banding               |
-| **Database**            | SQLite              | Content storage & analytics                |
-| **Frontend**            | HTML5 + JavaScript  | User interface                             |
-| **Keywords**            | 2,736 curated terms | Rule-based filtering                       |
+| Component               | Technology            | Purpose                                    |
+| ----------------------- | --------------------- | ------------------------------------------ |
+| **Backend**             | FastAPI + Python      | Async API                                  |
+| **ML Moderation Layer** | LightGBM              | Custom fraud/scam classifier (retrainable) |
+| **AI Models**           | Detoxify + FinBERT    | Toxicity & financial banding               |
+| **LLM Escalation**      | Groq, FinGPT, ChatGPT | Explanations, suggestions, feedback        |
+| **Database**            | SQLite                | Content storage & analytics                |
+| **Frontend**            | HTML5 + JavaScript    | User interface                             |
+| **Keywords**            | 2,736 curated terms   | Rule-based filtering                       |
+
+---
+
+## 🔑 Environment Configuration (`.env` file template)
+
+Create a `.env` file in your project root or backend directory:
+
+```env
+# HuggingFace API Token (for model inference)
+ModerationAPP="<your_huggingface_token>"
+
+# Groq API Key (for LLM escalation/explanation)
+GROQ_API_KEY="<your_groq_api_key>"
+
+# HuggingFace Token (alternate for transformers/requests)
+HF_TOKEN="<your_huggingface_token>"
+```
+
+* **Never** commit real tokens to version control.
+* The backend auto-loads this file at startup.
 
 ---
 
