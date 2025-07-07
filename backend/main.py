@@ -20,6 +20,7 @@ dotenv_path = BASE_DIR / ".env"
 print(f"Loading .env from: {dotenv_path}")
 load_dotenv(dotenv_path)
 print("DEBUG: GROQ_API_KEY is:", os.getenv("GROQ_API_KEY"))
+print(os.getenv("ModerationAPP"))
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
