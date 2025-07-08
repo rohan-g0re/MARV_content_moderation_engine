@@ -57,3 +57,4 @@ python-jose[cryptography]
 python-dateutil
 tqdm
 click
+lightgbm
