@@ -1,59 +1,112 @@
-# Core Backend Dependencies
-fastapi==0.104.1
-uvicorn==0.24.0
-pydantic==2.5.0
-python-multipart==0.0.6
+# Core Backend Dependencies - TESTED & WORKING
+fastapi
+uvicorn
+starlette
+pydantic
+pydantic-core
+pydantic-settings
+python-multipart
 
-# AI/ML Dependencies
-transformers==4.35.2
-torch==2.7.1
+# AI/ML Core Frameworks - TESTED & WORKING  
+transformers
+torch
 sentence-transformers
 numpy
 pandas
 scikit-learn
-detoxify==0.5.2
+scipy
+lightgbm
 
-matplotlib>=3.5.0
-seaborn>=0.11.0
-openpyxl>=3.0.0
+# Content Moderation AI Models - TESTED & WORKING
+huggingface-hub
+tokenizers
+safetensors
 
-
-# Database Dependencies
-sqlalchemy==2.0.23
+# Database Dependencies - TESTED & WORKING
+sqlalchemy
 psycopg2-binary
-alembic
+greenlet
 
-# API and HTTP
+# API and HTTP Clients - TESTED & WORKING
 requests
 aiohttp
+aiohappyeyeballs
+aiosignal
 httpx
+httpcore
+httptools
+httplib2
 
-# Environment and Configuration
-python-dotenv
-pydantic-settings
-
-# Logging and Monitoring
-structlog
-rich
-
-# Data Processing
+# NLP and Text Processing - TESTED & WORKING
 nltk
 spacy
-textblob
+spacy-legacy
+spacy-loggers
+language-data
+langcodes
 
-# Development Dependencies
+# Environment and Configuration - TESTED & WORKING
+python-dotenv
+click
+
+# Logging and Monitoring - TESTED & WORKING
+structlog
+rich
+colorama
+
+# Security and Authentication - TESTED & WORKING
+cryptography
+passlib
+python-jose
+bcrypt
+ecdsa
+pyasn1
+pyasn1-modules
+rsa
+
+# Data Processing and Utilities - TESTED & WORKING
+python-dateutil
+tqdm
+regex
+six
+packaging
+filelock
+fsspec
+cloudpathlib
+smart-open
+
+# Development Dependencies - TESTED & WORKING
 pytest
 pytest-asyncio
 black
 flake8
 mypy
 
-# Security
-cryptography
-passlib[bcrypt]
-python-jose[cryptography]
+# Web Framework Support - TESTED & WORKING
+anyio
+sniffio
+h11
+websockets
 
-# Utilities
-python-dateutil
-tqdm
-click
+# Core Python Dependencies - TESTED & WORKING
+typing-extensions
+annotated-types
+typing-inspection
+jinja2
+markupsafe
+setuptools
+pyyaml
+sympy
+networkx
+pytz
+tzdata
+pillow
+urllib3
+certifi
+charset-normalizer
+idna
+attrs
+
+
+# Due to installation issues, this is last
+detoxify

@@ -255,8 +255,7 @@ config/secrets.py
 .env.staging
 secrets.yaml
 
-# ML Model files
-*.pkl
+# ML Model files (excluded: lgbm_support.pkl needed for pipeline)
 *.joblib
 *.h5
 *.pt

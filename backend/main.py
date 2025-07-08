@@ -30,7 +30,7 @@ load_dotenv(dotenv_path)
 logger = get_logger("main", "moderation.log")
 
 # ---- Import your moderation engine! ----
-from app.core.moderation import GuardianModerationEngine
+from app.core.moderation_safe import GuardianModerationEngine
 
 # Database configuration
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:123456@localhost:5432/content_moderation")
