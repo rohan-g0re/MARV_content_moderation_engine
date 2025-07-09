@@ -266,7 +266,7 @@ python content_analyzer.py     # Bulk content analysis from Excel/CSV files
 | **AI Models** | Detoxify + FinBERT | Toxicity & financial analysis |
 | **Database** | PostgreSQL | Content storage & analytics |
 | **Frontend** | HTML5 + JavaScript | User interface |
-| **Keywords** | 2,736 curated terms | Rule-based filtering |
+| **Keywords** | 6,069 curated terms | Rule-based filtering |
 
 ---
 
