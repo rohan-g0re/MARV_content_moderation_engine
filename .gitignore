@@ -256,7 +256,6 @@ config/secrets.py
 secrets.yaml
 
 # ML Model files
-*.pkl
 *.joblib
 *.h5
 *.pt
