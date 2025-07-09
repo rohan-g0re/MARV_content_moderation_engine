@@ -3,6 +3,16 @@ GuardianAI Content Moderation Core Pipeline - Safe Version
 Handles missing AI dependencies gracefully for basic functionality testing
 """
 
+# =============================================================================
+# 🎚️ SIMPLE TOGGLE FOR NON-TECHNICAL USERS
+# Change this ONE setting to control the entire moderation pipeline:
+# 
+# PRODUCTION_MODE = True   → Full pipeline (all 4 stages: rules + LGBM + AI)
+# PRODUCTION_MODE = False  → Testing mode (only basic rule-based filtering)
+# =============================================================================
+PRODUCTION_MODE = True
+
+import os
 import re
 import json
 import logging
@@ -209,10 +219,41 @@ class LGBMFeatureExtractor:
 class GuardianModerationEngine:
     """
     Safe version of moderation engine that works without AI dependencies
-    Now includes LGBM as Stage 2
+    Now includes LGBM as Stage 2 and stage toggles for testing
     """
     
-    def __init__(self, keywords_file: str = "data/external/words.json"):
+    def __init__(self, 
+                 keywords_file: str = "data/external/words.json",
+                 stage1_enabled: bool = None,
+                 stage2_enabled: bool = None,
+                 stage3_enabled: bool = None,
+                 stage4_enabled: bool = None):
+        
+        # 🎚️ SIMPLE MODE: Use the global PRODUCTION_MODE setting if individual stages not specified
+        if all(param is None for param in [stage1_enabled, stage2_enabled, stage3_enabled, stage4_enabled]):
+            if PRODUCTION_MODE:
+                # Production: Use all available stages
+                stage1_enabled = True   # Rule-based filtering
+                stage2_enabled = True   # LGBM model  
+                stage3_enabled = True   # Detoxify AI
+                stage4_enabled = True   # FinBERT AI
+                logger.info("🚀 PRODUCTION_MODE=True → Using full pipeline (all 4 stages)")
+            else:
+                # Testing: Use only basic rule-based filtering  
+                stage1_enabled = True   # Rule-based filtering only
+                stage2_enabled = False  # Skip LGBM
+                stage3_enabled = False  # Skip Detoxify AI
+                stage4_enabled = False  # Skip FinBERT AI
+                logger.info("🧪 PRODUCTION_MODE=False → Using testing mode (rule-based only)")
+        
+        # Initialize stage toggles - check environment variables first, then parameters, then defaults
+        self.stage1_enabled = self._get_bool_setting("STAGE1_ENABLED", stage1_enabled, True)
+        self.stage2_enabled = self._get_bool_setting("STAGE2_ENABLED", stage2_enabled, True)
+        self.stage3_enabled = self._get_bool_setting("STAGE3_ENABLED", stage3_enabled, True)
+        self.stage4_enabled = self._get_bool_setting("STAGE4_ENABLED", stage4_enabled, True)
+        
+        logger.info(f"🎚️ Stage toggles - Stage1: {self.stage1_enabled}, Stage2: {self.stage2_enabled}, Stage3: {self.stage3_enabled}, Stage4: {self.stage4_enabled}")
+        
         # Handle relative path from backend directory
         if not Path(keywords_file).exists():
             # Try from parent directory (when running from backend/)
@@ -224,18 +265,24 @@ class GuardianModerationEngine:
         self.lgbm_model = None
         self.lgbm_support = None
         self.feature_extractor = None
-        if LIGHTGBM_AVAILABLE:
+        if LIGHTGBM_AVAILABLE and self.stage2_enabled:
             self._initialize_lgbm()
         else:
-            logger.warning("LightGBM not available - LGBM stage disabled")
+            if not self.stage2_enabled:
+                logger.info("LGBM stage disabled by toggle")
+            else:
+                logger.warning("LightGBM not available - LGBM stage disabled")
         
         # Initialize AI models safely
         self.detoxify_classifier = None
         self.finbert_classifier = None
-        if TRANSFORMERS_AVAILABLE and TORCH_AVAILABLE:
+        if TRANSFORMERS_AVAILABLE and TORCH_AVAILABLE and (self.stage3_enabled or self.stage4_enabled):
             self._initialize_models()
         else:
-            logger.warning("AI dependencies not available - running in rule-based mode only")
+            if not (self.stage3_enabled or self.stage4_enabled):
+                logger.info("AI stages disabled by toggles")
+            else:
+                logger.warning("AI dependencies not available - running in rule-based mode only")
         
         # Thresholds for moderation stages
         self.lgbm_threshold = 0.7  # Threshold for LGBM flagging
@@ -260,6 +307,65 @@ class GuardianModerationEngine:
         }
         
         logger.info(f"GuardianAI initialized with {len(self.keywords)} keywords")
+
+    def _get_bool_setting(self, env_var: str, param_value: Optional[bool], default_value: bool) -> bool:
+        """Get boolean setting from environment variable, parameter, or default"""
+        if param_value is not None:
+            return param_value
+        
+        env_value = os.getenv(env_var)
+        if env_value is not None:
+            return env_value.lower() in ('true', '1', 'yes', 'on', 'enabled')
+        
+        return default_value
+
+    def set_stage_toggles(self, stage1: bool = None, stage2: bool = None, 
+                         stage3: bool = None, stage4: bool = None):
+        """Dynamically update stage toggles"""
+        if stage1 is not None:
+            self.stage1_enabled = stage1
+        if stage2 is not None:
+            self.stage2_enabled = stage2
+        if stage3 is not None:
+            self.stage3_enabled = stage3
+        if stage4 is not None:
+            self.stage4_enabled = stage4
+        
+        logger.info(f"🎚️ Stage toggles updated - Stage1: {self.stage1_enabled}, Stage2: {self.stage2_enabled}, Stage3: {self.stage3_enabled}, Stage4: {self.stage4_enabled}")
+
+    def get_simple_mode_info(self) -> Dict:
+        """Get simple mode information for non-technical users"""
+        return {
+            "PRODUCTION_MODE": PRODUCTION_MODE,
+            "mode_description": "Full pipeline (all 4 stages)" if PRODUCTION_MODE else "Testing mode (rule-based only)",
+            "active_stages": {
+                "stage1_rule_based": self.stage1_enabled,
+                "stage2_lgbm": self.stage2_enabled,
+                "stage3_detoxify": self.stage3_enabled,
+                "stage4_finbert": self.stage4_enabled
+            },
+            "instructions": {
+                "how_to_change": "Edit PRODUCTION_MODE at the top of moderation_safe.py",
+                "production_mode": "PRODUCTION_MODE = True  (uses all 4 stages)",
+                "testing_mode": "PRODUCTION_MODE = False (uses only basic filtering)"
+            }
+        }
+
+    def get_stage_config(self) -> Dict:
+        """Get current stage configuration"""
+        return {
+            "simple_mode": self.get_simple_mode_info(),
+            "stage1_enabled": self.stage1_enabled,
+            "stage2_enabled": self.stage2_enabled,
+            "stage3_enabled": self.stage3_enabled,
+            "stage4_enabled": self.stage4_enabled,
+            "stage_descriptions": {
+                "stage1": "Rule-based filtering (keywords & regex)",
+                "stage2": "LGBM machine learning model",
+                "stage3": "Detoxify AI toxicity detection",
+                "stage4": "FinBERT financial fraud detection"
+            }
+        }
 
     def _load_keywords(self) -> List[str]:
         """Load keywords from JSON file"""
@@ -553,7 +659,7 @@ class GuardianModerationEngine:
     def moderate_content(self, content: str) -> ModerationResult:
         """
         Main moderation pipeline entry point
-        Updated to include LGBM as Stage 2
+        Updated to include LGBM as Stage 2 and respect stage toggles
         """
         if not content or len(content.strip()) == 0:
             return ModerationResult(
@@ -567,27 +673,49 @@ class GuardianModerationEngine:
             )
         
         # Stage 1: Rule-based filtering
-        stage1_result = self.stage1_rule_based_filter(content)
-        if not stage1_result.accepted:
-            return stage1_result
+        if self.stage1_enabled:
+            stage1_result = self.stage1_rule_based_filter(content)
+            if not stage1_result.accepted:
+                return stage1_result
+        else:
+            logger.info("⏭️ Stage 1 (rule-based) skipped - disabled by toggle")
         
         # Stage 2: LGBM machine learning model
-        stage2_result = self.stage2_lgbm_check(content)
-        if not stage2_result.accepted:
-            return stage2_result
+        if self.stage2_enabled:
+            stage2_result = self.stage2_lgbm_check(content)
+            if not stage2_result.accepted:
+                return stage2_result
+        else:
+            logger.info("⏭️ Stage 2 (LGBM) skipped - disabled by toggle")
         
         # Stage 3: Detoxify AI (if available)
-        stage3_result = self.stage3_detoxify_check(content)
-        if not stage3_result.accepted:
-            return stage3_result
+        if self.stage3_enabled:
+            stage3_result = self.stage3_detoxify_check(content)
+            if not stage3_result.accepted:
+                return stage3_result
+        else:
+            logger.info("⏭️ Stage 3 (Detoxify) skipped - disabled by toggle")
         
         # Stage 4: FinBERT AI (if available)
-        stage4_result = self.stage4_finbert_check(content)
-        return stage4_result
+        if self.stage4_enabled:
+            stage4_result = self.stage4_finbert_check(content)
+            return stage4_result
+        else:
+            logger.info("⏭️ Stage 4 (FinBERT) skipped - disabled by toggle")
+            return ModerationResult(
+                accepted=True,
+                reason="All enabled stages passed",
+                threat_level="low",
+                confidence=0.8,
+                stage="pipeline-complete",
+                band="SAFE",
+                action="PASS"
+            )
 
     def get_model_status(self) -> Dict:
         """Get status of all models"""
         return {
+            "stage_toggles": self.get_stage_config(),
             "lgbm_loaded": self.lgbm_model is not None,
             "detoxify_loaded": self.detoxify_classifier is not None,
             "finbert_loaded": self.finbert_classifier is not None,

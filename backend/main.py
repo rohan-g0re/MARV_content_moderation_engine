@@ -16,6 +16,7 @@ import requests
 import psycopg2
 from psycopg2 import sql
 from datetime import datetime
+from typing import Optional
 
 from dotenv import load_dotenv
 from logger import get_logger
@@ -326,6 +327,12 @@ class SaveCommentsRequest(BaseModel):
     post_id: int
     comments: str
 
+class StageToggleRequest(BaseModel):
+    stage1_enabled: Optional[bool] = None
+    stage2_enabled: Optional[bool] = None
+    stage3_enabled: Optional[bool] = None
+    stage4_enabled: Optional[bool] = None
+
 # ---- Real moderation engine ----
 moderation_engine = GuardianModerationEngine()
 
@@ -423,6 +430,32 @@ def root():
         "version": "2.0.0",
         "models": moderation_engine.get_model_status()
     }
+
+@app.get("/simple-mode")
+def get_simple_mode():
+    """Get simple mode information for non-technical users"""
+    try:
+        mode_info = moderation_engine.get_simple_mode_info()
+        
+        return {
+            "message": "GuardianAI Simple Mode Status",
+            "current_mode": "PRODUCTION" if mode_info["PRODUCTION_MODE"] else "TESTING",
+            "description": mode_info["mode_description"],
+            "active_stages": mode_info["active_stages"],
+            "how_to_change": {
+                "step1": "Open the file: backend/app/core/moderation_safe.py",
+                "step2": "Find the line: PRODUCTION_MODE = True or False",
+                "step3": "Change it to: PRODUCTION_MODE = True (for full pipeline) or PRODUCTION_MODE = False (for testing)",
+                "step4": "Restart the server"
+            },
+            "mode_options": {
+                "PRODUCTION_MODE = True": "Full pipeline - Uses all 4 stages (rules + LGBM + AI models)",
+                "PRODUCTION_MODE = False": "Testing mode - Uses only basic rule-based filtering"
+            }
+        }
+    except Exception as e:
+        logger.error(f"Simple mode error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/health")
 def health():
@@ -653,6 +686,124 @@ def save_comments(request: SaveCommentsRequest):
         raise
     except Exception as e:
         logger.error(f"Save comments error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/stage-config")
+def get_stage_config():
+    """Get current stage configuration and status"""
+    try:
+        config = moderation_engine.get_stage_config()
+        status = moderation_engine.get_model_status()
+        
+        return {
+            "stage_config": config,
+            "model_status": status,
+            "message": "Current stage configuration and model status"
+        }
+    except Exception as e:
+        logger.error(f"Stage config error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/stage-config")
+def update_stage_config(request: StageToggleRequest):
+    """Update stage toggle configuration"""
+    try:
+        # Get current config before update
+        old_config = moderation_engine.get_stage_config()
+        
+        # Update the toggles
+        moderation_engine.set_stage_toggles(
+            stage1=request.stage1_enabled,
+            stage2=request.stage2_enabled,
+            stage3=request.stage3_enabled,
+            stage4=request.stage4_enabled
+        )
+        
+        # Get new config after update
+        new_config = moderation_engine.get_stage_config()
+        
+        logger.info(
+            "Stage configuration updated",
+            extra={"extra": {
+                "old_config": old_config,
+                "new_config": new_config,
+                "timestamp": datetime.utcnow().isoformat() + "Z",
+            }},
+        )
+        
+        return {
+            "success": True,
+            "message": "Stage configuration updated",
+            "old_config": old_config,
+            "new_config": new_config
+        }
+    except Exception as e:
+        logger.error(f"Stage config update error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/test-stages")
+def test_stages(request: ModerationRequest):
+    """Test content through each stage individually to see results"""
+    try:
+        content = request.content
+        results = {}
+        
+        # Save original stage config
+        original_config = moderation_engine.get_stage_config()
+        
+        # Test each stage individually
+        stages = {
+            "stage1_only": {"stage1_enabled": True, "stage2_enabled": False, "stage3_enabled": False, "stage4_enabled": False},
+            "stage2_only": {"stage1_enabled": False, "stage2_enabled": True, "stage3_enabled": False, "stage4_enabled": False},
+            "stage3_only": {"stage1_enabled": False, "stage2_enabled": False, "stage3_enabled": True, "stage4_enabled": False},
+            "stage4_only": {"stage1_enabled": False, "stage2_enabled": False, "stage3_enabled": False, "stage4_enabled": True},
+            "all_stages": {"stage1_enabled": True, "stage2_enabled": True, "stage3_enabled": True, "stage4_enabled": True},
+            "no_stages": {"stage1_enabled": False, "stage2_enabled": False, "stage3_enabled": False, "stage4_enabled": False}
+        }
+        
+        for test_name, config in stages.items():
+            try:
+                # Set the specific stage configuration
+                moderation_engine.set_stage_toggles(**config)
+                
+                # Test the content
+                result = moderation_engine.moderate_content(content)
+                
+                results[test_name] = {
+                    "config": config,
+                    "result": result.to_dict()
+                }
+            except Exception as e:
+                results[test_name] = {
+                    "config": config,
+                    "error": str(e)
+                }
+        
+        # Restore original configuration
+        moderation_engine.set_stage_toggles(
+            stage1=original_config["stage1_enabled"],
+            stage2=original_config["stage2_enabled"],
+            stage3=original_config["stage3_enabled"],
+            stage4=original_config["stage4_enabled"]
+        )
+        
+        logger.info(
+            "Stage testing completed",
+            extra={"extra": {
+                "content": content[:100],
+                "results_count": len(results),
+                "timestamp": datetime.utcnow().isoformat() + "Z",
+            }},
+        )
+        
+        return {
+            "content": content,
+            "test_results": results,
+            "original_config_restored": original_config
+        }
+        
+    except Exception as e:
+        logger.error(f"Stage testing error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
