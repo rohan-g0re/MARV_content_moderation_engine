@@ -93,7 +93,7 @@ class ModerationStage(ABC):
 
 # Stage 1: Heuristic/Lexical Filter
 class Stage1LexicalFilter(ModerationStage):
-    def __init__(self, keywords_file: str = "data/external/words.json"):
+    def __init__(self, keywords_file: str = "../data/external/words.json"):
         self.keywords_file = Path(keywords_file)
         self.scam_lexicon = self._load_scam_lexicon()
 
@@ -700,7 +700,7 @@ Instructions:
 
 # Pipeline builder
 
-def create_default_pipeline(keywords_file: str = "data/external/words.json", groq_api_key: str = None) -> 'ModerationPipeline':
+def create_default_pipeline(keywords_file: str = "../data/external/words.json", groq_api_key: str = None) -> 'ModerationPipeline':
     pipeline = ModerationPipeline()
 
     # Always resolve paths from THIS FILE location
@@ -750,7 +750,7 @@ class ModerationPipeline:
 
 # Legacy wrapper
 class GuardianModerationEngine:
-    def __init__(self, keywords_file: str = "data/external/words.json"):
+    def __init__(self, keywords_file: str = "../data/external/words.json"):
         self.pipeline = create_default_pipeline(keywords_file)
 
     def moderate_content(self, content: str) -> ModerationResult:
