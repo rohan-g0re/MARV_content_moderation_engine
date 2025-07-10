@@ -8,6 +8,7 @@ Stages:
 4. Stage 3a - FinBERT (Sentiment)
 5. Stage 3b - CiferAI/Heuristic (Fraud)
 6. LLM Escalation (Chain-of-Thought, fallback)
+7. Quant Mode - Quantitative Analysis & Risk Scoring
 """
 
 import re
@@ -15,15 +16,20 @@ import json
 import logging
 import requests
 import os
+import numpy as np
+import pandas as pd
 from typing import Dict, List, Optional, Tuple, Any
 from pathlib import Path
 from transformers import pipeline
 import torch
-import pandas as pd
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from dotenv import load_dotenv
 import joblib
+from scipy import stats
+from sklearn.preprocessing import StandardScaler
+import warnings
+warnings.filterwarnings('ignore')
 
 # Load environment variables from backend/.env
 backend_dir = Path(__file__).parent.parent.parent
@@ -45,6 +51,13 @@ class ModerationResult:
     confidence: float = 1.0
     threat_level: str = "low"
     metadata: Dict[str, Any] = field(default_factory=dict)
+    
+    # Quantitative analysis fields
+    risk_score: float = 0.0
+    confidence_interval: Tuple[float, float] = (0.0, 1.0)
+    statistical_significance: float = 0.0
+    anomaly_score: float = 0.0
+    quant_metrics: Dict[str, float] = field(default_factory=dict)
 
     @property
     def action(self) -> str:
@@ -78,6 +91,11 @@ class ModerationResult:
             "reason": self.reason,
             "confidence": self.confidence,
             "threat_level": self.threat_level,
+            "risk_score": self.risk_score,
+            "confidence_interval": self.confidence_interval,
+            "statistical_significance": self.statistical_significance,
+            "anomaly_score": self.anomaly_score,
+            "quant_metrics": self.quant_metrics,
             "metadata": self.metadata or {}
         }
 
@@ -760,4 +778,225 @@ class GuardianModerationEngine:
         return {
             "pipeline_stages": len(self.pipeline.stages),
             "stage_names": [stage.stage_name for stage in self.pipeline.stages]
+        }
+
+# Stage Quant: Quantitative Analysis & Risk Scoring
+class QuantModerationStage(ModerationStage):
+    def __init__(self, risk_threshold: float = 0.7, confidence_level: float = 0.95):
+        self.risk_threshold = risk_threshold
+        self.confidence_level = confidence_level
+        self.scaler = StandardScaler()
+        self._initialize_quant_models()
+
+    @property
+    def stage_name(self):
+        return "quant"
+
+    def _initialize_quant_models(self):
+        """Initialize quantitative analysis models and baseline data"""
+        # Baseline statistics for normal content (could be loaded from historical data)
+        self.baseline_stats = {
+            'avg_length': 50.0,
+            'std_length': 30.0,
+            'avg_punct_ratio': 0.15,
+            'std_punct_ratio': 0.08,
+            'avg_word_count': 10.0,
+            'std_word_count': 5.0
+        }
+
+    def _calculate_risk_score(self, text: str, context: Dict[str, Any] = None) -> float:
+        """Calculate comprehensive risk score based on multiple factors"""
+        risk_factors = []
+        
+        # Text-based risk factors
+        text_length = len(text)
+        punct_count = sum(1 for c in text if c in '!?.,;:')
+        word_count = len(text.split())
+        
+        # Normalize text characteristics
+        length_z_score = (text_length - self.baseline_stats['avg_length']) / self.baseline_stats['std_length']
+        punct_ratio = punct_count / max(text_length, 1)
+        punct_z_score = (punct_ratio - self.baseline_stats['avg_punct_ratio']) / self.baseline_stats['std_punct_ratio']
+        
+        # Add risk factors
+        risk_factors.append(abs(length_z_score) * 0.2)  # Unusual length
+        risk_factors.append(abs(punct_z_score) * 0.3)   # Unusual punctuation
+        risk_factors.append(1.0 if text.isupper() else 0.0)  # All caps
+        risk_factors.append(1.0 if any(word in text.lower() for word in ['urgent', 'now', 'limited', 'act']) else 0.0)  # Urgency words
+        
+        # Context-based risk factors
+        if context:
+            for stage_name, result in context.items():
+                if result.decision == "ESCALATE":
+                    risk_factors.append(0.5)  # Previous escalation
+                elif result.decision == "BLOCK":
+                    risk_factors.append(0.8)  # Previous block
+                elif result.confidence < 0.5:
+                    risk_factors.append(0.3)  # Low confidence
+        
+        # Calculate final risk score (0-1)
+        risk_score = min(1.0, sum(risk_factors) / len(risk_factors)) if risk_factors else 0.0
+        return risk_score
+
+    def _calculate_confidence_interval(self, confidence: float, sample_size: int = 100) -> Tuple[float, float]:
+        """Calculate confidence interval for the confidence score"""
+        if sample_size <= 1:
+            return (confidence, confidence)
+        
+        # Standard error approximation
+        se = np.sqrt(confidence * (1 - confidence) / sample_size)
+        z_score = stats.norm.ppf((1 + self.confidence_level) / 2)
+        margin_of_error = z_score * se
+        
+        lower = max(0.0, confidence - margin_of_error)
+        upper = min(1.0, confidence + margin_of_error)
+        
+        return (lower, upper)
+
+    def _calculate_statistical_significance(self, text: str, context: Dict[str, Any] = None) -> float:
+        """Calculate statistical significance of the moderation decision"""
+        # This is a simplified version - in practice, you'd compare against historical data
+        if not context:
+            return 0.5
+        
+        # Count how many stages made the same decision
+        decisions = [result.decision for result in context.values()]
+        if not decisions:
+            return 0.5
+        
+        # Calculate agreement ratio
+        most_common_decision = max(set(decisions), key=decisions.count)
+        agreement_ratio = decisions.count(most_common_decision) / len(decisions)
+        
+        # Convert to significance score (0-1)
+        significance = agreement_ratio * 0.8 + 0.2  # Base significance of 0.2
+        return min(1.0, significance)
+
+    def _calculate_anomaly_score(self, text: str) -> float:
+        """Calculate anomaly score based on text characteristics"""
+        # Extract features
+        text_length = len(text)
+        punct_count = sum(1 for c in text if c in '!?.,;:')
+        word_count = len(text.split())
+        unique_words = len(set(text.lower().split()))
+        
+        # Calculate z-scores
+        length_z = abs((text_length - self.baseline_stats['avg_length']) / self.baseline_stats['std_length'])
+        punct_ratio = punct_count / max(text_length, 1)
+        punct_z = abs((punct_ratio - self.baseline_stats['avg_punct_ratio']) / self.baseline_stats['std_punct_ratio'])
+        
+        # Anomaly indicators
+        all_caps = 1.0 if text.isupper() else 0.0
+        excessive_punct = 1.0 if punct_ratio > 0.3 else 0.0
+        very_short = 1.0 if text_length < 10 else 0.0
+        very_long = 1.0 if text_length > 200 else 0.0
+        
+        # Calculate anomaly score
+        anomaly_factors = [length_z * 0.3, punct_z * 0.3, all_caps * 0.2, 
+                          excessive_punct * 0.2, very_short * 0.1, very_long * 0.1]
+        anomaly_score = min(1.0, sum(anomaly_factors))
+        
+        return anomaly_score
+
+    def _calculate_quant_metrics(self, text: str, context: Dict[str, Any] = None) -> Dict[str, float]:
+        """Calculate comprehensive quantitative metrics"""
+        metrics = {}
+        
+        # Text complexity metrics
+        metrics['text_length'] = len(text)
+        metrics['word_count'] = len(text.split())
+        metrics['avg_word_length'] = np.mean([len(word) for word in text.split()]) if text.split() else 0
+        metrics['punct_ratio'] = sum(1 for c in text if c in '!?.,;:') / max(len(text), 1)
+        metrics['uppercase_ratio'] = sum(1 for c in text if c.isupper()) / max(len(text), 1)
+        
+        # Context-based metrics
+        if context:
+            metrics['stage_agreement'] = len(set(result.decision for result in context.values())) / max(len(context), 1)
+            metrics['avg_confidence'] = np.mean([result.confidence for result in context.values()]) if context else 0.5
+            metrics['escalation_count'] = sum(1 for result in context.values() if result.decision == "ESCALATE")
+            metrics['block_count'] = sum(1 for result in context.values() if result.decision == "BLOCK")
+        
+        return metrics
+
+    def process(self, text: str, context: Dict[str, Any] = None) -> ModerationResult:
+        """Process text through quantitative analysis"""
+        context = context or {}
+        
+        # Calculate quantitative metrics
+        risk_score = self._calculate_risk_score(text, context)
+        confidence_interval = self._calculate_confidence_interval(0.7, 100)  # Example confidence
+        statistical_significance = self._calculate_statistical_significance(text, context)
+        anomaly_score = self._calculate_anomaly_score(text)
+        quant_metrics = self._calculate_quant_metrics(text, context)
+        
+        # Determine decision based on risk score and context
+        if risk_score > self.risk_threshold:
+            decision = "BLOCK"
+            threat_level = "high"
+            confidence = risk_score
+            reason = f"quant_risk_score_{risk_score:.2f}"
+        elif risk_score > self.risk_threshold * 0.7:
+            decision = "ESCALATE"
+            threat_level = "medium"
+            confidence = risk_score
+            reason = f"quant_elevated_risk_{risk_score:.2f}"
+        else:
+            decision = "ACCEPT"
+            threat_level = "low"
+            confidence = 1.0 - risk_score
+            reason = f"quant_low_risk_{risk_score:.2f}"
+        
+        return ModerationResult(
+            decision=decision,
+            stage=self.stage_name,
+            reason=reason,
+            confidence=confidence,
+            threat_level=threat_level,
+            risk_score=risk_score,
+            confidence_interval=confidence_interval,
+            statistical_significance=statistical_significance,
+            anomaly_score=anomaly_score,
+            quant_metrics=quant_metrics,
+            metadata={
+                "quant_analysis": True,
+                "risk_threshold": self.risk_threshold,
+                "confidence_level": self.confidence_level
+            }
+        )
+
+# Updated pipeline builder with quant mode
+def create_quant_pipeline(keywords_file: str = "data/external/words.json", groq_api_key: str = None) -> 'ModerationPipeline':
+    """Create pipeline with quantitative analysis stage"""
+    pipeline = ModerationPipeline()
+
+    # Always resolve paths from THIS FILE location
+    base_dir = Path(__file__).resolve().parent
+    model_path = base_dir / "lgbm_moderation.txt"
+    support_path = base_dir / "lgbm_support.pkl"
+
+    pipeline.register_stage(Stage1LexicalFilter(keywords_file))
+    pipeline.register_stage(StageLGBMModeration(model_path=model_path, support_path=support_path))
+    pipeline.register_stage(Stage2ToxicityCheck(toxicity_threshold=0.5))
+    pipeline.register_stage(Stage3aSentimentSentinels())
+    pipeline.register_stage(Stage3bFraudClassifier())
+    pipeline.register_stage(LLMEscalation(groq_api_key))
+    pipeline.register_stage(QuantModerationStage())  # Add quant stage
+    return pipeline
+
+# Updated legacy wrapper with quant mode
+class GuardianModerationEngine:
+    def __init__(self, keywords_file: str = "data/external/words.json", quant_mode: bool = False):
+        if quant_mode:
+            self.pipeline = create_quant_pipeline(keywords_file)
+        else:
+            self.pipeline = create_default_pipeline(keywords_file)
+
+    def moderate_content(self, content: str) -> ModerationResult:
+        return self.pipeline.process(content)
+
+    def get_model_status(self) -> Dict:
+        return {
+            "pipeline_stages": len(self.pipeline.stages),
+            "stage_names": [stage.stage_name for stage in self.pipeline.stages],
+            "quant_mode": any(stage.stage_name == "quant" for stage in self.pipeline.stages)
         } 

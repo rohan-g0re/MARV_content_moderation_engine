@@ -57,8 +57,9 @@ def extract_features(text: str, keywords: List[str] = [], tfidf_vec=None) -> Dic
         "num_chars": num_chars,
         "avg_word_len": (num_chars / num_words) if num_words > 0 else 0,
         "num_upper": num_upper,
-        "num_exclaims": num_exclaims,
-        "num_questions": num_questions,
+        # Down-weighted features:
+        "num_exclaims": num_exclaims * 0.1,  # Down-weighted
+        "num_questions": num_questions * 0.1,  # Down-weighted
         "num_links": num_links,
         "num_mentions": num_mentions,
         "num_dollar": num_dollar,

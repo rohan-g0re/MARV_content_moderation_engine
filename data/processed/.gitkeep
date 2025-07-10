@@ -1,3 +1,0 @@
-# This file ensures the data/processed directory is tracked by git
-# All actual data files in this directory will be ignored by .gitignore
-# This maintains the project structure for other developers 
