@@ -11,11 +11,12 @@
 
 GuardianAI is a sophisticated content moderation system designed for financial companies requiring precise risk assessment. It processes user-generated content through a multi-stage intelligent pipeline with robust fallback mechanisms:
 
-- **Stage1_RuleBased**: Heuristic/Lexical Filter (Regex/Fuzzy)
-- **Stage2_LGBM**: LightGBM ML Model
-- **Stage3_Detoxify**: Detoxify (Toxicity)
-- **Stage4_FinBert**: FinBERT (Sentiment)
-- **Stage5_LLM**: LLM Escalation (Chain-of-Thought, fallback)
+- **Stage1_RuleBased**: Rule-based lexical filtering with 2,736+ keywords and advanced patterns
+- **Stage2_LGBM**: LightGBM machine learning model for content classification
+- **Stage3_Detoxify**: Toxicity detection using Detoxify AI
+- **Stage4_FinBert**: Financial sentiment analysis using FinBERT
+- **Stage5_LLM**: LLM escalation with Chain-of-Thought reasoning
+- **Fallback Logic**: Intelligent handling of external model failures
 
 ### Key Benefits
 - ✅ **Robust Fallback System** - Continues operation when external models are unavailable
@@ -37,84 +38,62 @@ graph TD
     
     D --> E["🛡️ GuardianModerationEngine v2.1<br/>Multi-Stage Pipeline"]
     
-    E --> F["📋 Stage1_RuleBased: Lexical Filter<br/>Heuristic + Regex + Patterns"]
+    E --> F["📋 Stage1_RuleBased<br/>Keywords + Regex + Patterns"]
     F --> G{"🔍 Suspicious Content?"}
     G -->|Yes| H["❌ BLOCK<br/>High Confidence"]
     G -->|No| I["✅ Continue to Stage2_LGBM"]
     
-    I --> J["🤖 Stage2_LGBM: LGBM ML<br/>Machine Learning Classification"]
+    I --> J["🤖 Stage2_LGBM<br/>Machine Learning Classification"]
     J --> K{"🧠 ML Prediction"}
     K -->|BLOCK| L["❌ BLOCK<br/>High Confidence"]
     K -->|FLAG| M["⚠️ ESCALATE<br/>Medium Confidence"]
     K -->|PASS| N["✅ Continue to Stage3_Detoxify"]
     
-    N --> O["🧪 Stage3_Detoxify: Toxicity<br/>Detoxify AI Model"]
+    N --> O["🧪 Stage3_Detoxify<br/>Detoxify AI Model"]
     O --> P{"☠️ Toxic Content?"}
     P -->|Yes| Q["❌ BLOCK<br/>Toxicity Detected"]
     P -->|No| R["✅ Continue to Stage4_FinBert"]
     
-    R --> S["💰 Stage4_FinBert: Sentiment<br/>FinBERT Model"]
-    S --> T["🔍 Mistral Model"]
-    S --> U["🔍 FinGPT Model"]
-    S --> V["🔍 Heuristic Rules"]
+    R --> S["💰 Stage4_FinBert<br/>Financial Sentiment Analysis"]
+    S --> T{"📈 Sentiment Score"}
+    T -->|Negative High| U["⚠️ ESCALATE<br/>Negative Sentiment"]
+    T -->|Neutral/Positive| V["✅ Continue to Stage5_LLM"]
     
-    T --> W{"📡 External API Available?"}
-    U --> X{"📡 External API Available?"}
+    V --> W["🧠 Stage5_LLM<br/>Chain-of-Thought Analysis"]
+    W --> X{"📡 Groq API Available?"}
+    X -->|No| Y["⚠️ Fallback Logic<br/>Check Previous Escalations"]
+    X -->|Yes| Z["🧠 LLM Analysis"]
     
-    W -->|No| Y["⚠️ Fallback: Skip Mistral"]
-    W -->|Yes| Z["📊 Mistral Score"]
-    X -->|No| AA["⚠️ Fallback: Skip FinGPT"]
-    X -->|Yes| BB["📊 FinGPT Score"]
+    Y --> AA{"🔍 Previous Escalations?"}
+    AA -->|Yes| BB["❌ BLOCK<br/>Fallback Decision"]
+    AA -->|No| CC["✅ ACCEPT<br/>Fallback Decision"]
     
-    Y --> CC["🎯 Ensemble Decision<br/>Heuristic + Available Models"]
-    Z --> CC
-    AA --> CC
-    BB --> CC
-    V --> CC
+    Z --> DD{"🧠 LLM Decision"}
+    DD -->|FRAUD| EE["❌ BLOCK<br/>LLM Confirmed"]
+    DD -->|CLEAN| FF["✅ ACCEPT<br/>LLM Confirmed"]
+    DD -->|UNCERTAIN| GG["❌ BLOCK<br/>Conservative Approach"]
     
-    CC --> DD{"🎯 Fraud Score"}
-    DD -->|High ≥0.9| EE["❌ BLOCK<br/>Fraud Detected"]
-    DD -->|Medium 0.2-0.9| FF["⚠️ ESCALATE<br/>Review Required"]
-    DD -->|Low ≤0.2| GG["✅ Continue to Stage5_LLM"]
+    H --> HH["💾 Database Storage<br/>PostgreSQL"]
+    L --> HH
+    Q --> HH
+    U --> HH
+    BB --> HH
+    CC --> HH
+    EE --> HH
+    FF --> HH
+    GG --> HH
     
-    GG --> HH["🧠 Stage5_LLM: LLM Escalation<br/>Chain-of-Thought Analysis"]
-    HH --> II{"📡 Groq API Available?"}
-    II -->|No| JJ["⚠️ Fallback Logic<br/>Check Previous Escalations"]
-    II -->|Yes| KK["🧠 LLM Analysis"]
-    
-    JJ --> LL{"🔍 Previous Escalations?"}
-    LL -->|Yes| MM["❌ BLOCK<br/>Fallback Decision"]
-    LL -->|No| NN["✅ ACCEPT<br/>Fallback Decision"]
-    
-    KK --> OO{"🧠 LLM Decision"}
-    OO -->|FRAUD| PP["❌ BLOCK<br/>LLM Confirmed"]
-    OO -->|CLEAN| QQ["✅ ACCEPT<br/>LLM Confirmed"]
-    OO -->|UNCERTAIN| RR["❌ BLOCK<br/>Conservative Approach"]
-    
-    H --> SS["💾 Database Storage<br/>PostgreSQL"]
-    L --> SS
-    Q --> SS
-    EE --> SS
-    FF --> SS
-    MM --> SS
-    NN --> SS
-    PP --> SS
-    QQ --> SS
-    RR --> SS
-    
-    SS --> TT["📊 Enhanced Response<br/>ModerationResponse v2.1"]
-    TT --> UU["🔄 Updated Frontend<br/>Real-time Results"]
+    HH --> II["📊 Enhanced Response<br/>ModerationResponse v2.1"]
+    II --> JJ["🔄 Updated Frontend<br/>Real-time Results"]
     
     style A fill:#e1f5fe
     style D fill:#f3e5f5
     style E fill:#fff3e0
     style Y fill:#ffebee
-    style AA fill:#ffebee
-    style JJ fill:#fff3e0
-    style NN fill:#e8f5e8
-    style QQ fill:#e8f5e8
-    style SS fill:#f3e5f5
-    style UU fill:#e8f5e8
+    style CC fill:#e8f5e8
+    style FF fill:#e8f5e8
+    style HH fill:#f3e5f5
+    style JJ fill:#e8f5e8
 ```
 
 ### 🎯 Multi-Stage Decision System
@@ -122,53 +101,10 @@ graph TD
 | Stage | Purpose | Models Used | Fallback Strategy |
 |-------|---------|-------------|-------------------|
 | **Stage1_RuleBased** | Lexical Filtering | Keywords + Regex | Always available |
-| **Stage2_LGBM** | ML Classification | LGBM Model | Model loading fallback |
-| **Stage3_Detoxify** | Toxicity Detection | Detoxify AI | Accept if unavailable |
-| **Stage4_FinBert** | Sentiment Analysis | FinBERT Model | Accept if unavailable |
+| **Stage2_LGBM** | ML Classification | LightGBM Model | Accept if model unavailable |
+| **Stage3_Detoxify** | Toxicity Detection | Detoxify AI | Accept if model unavailable |
+| **Stage4_FinBert** | Financial Sentiment | FinBERT | Accept if model unavailable |
 | **Stage5_LLM** | LLM Escalation | Groq LLM | Context-based fallback |
-
----
-
-## 📊 Real-Time Moderation Analytics (Grafana + PostgreSQL)
-
-GuardianAI provides real-time monitoring of the moderation pipeline using a Grafana dashboard connected to the PostgreSQL database. This enables instant visibility into system performance, stage-wise processing, and moderation outcomes.
-
-### Example Dashboard
-
-![GuardianAI Moderation Dashboard](docs/grafana_dashboard_example2.png)
-*Replace the image path above with your actual screenshot location if different.*
-
-### Dashboard Panels Explained
-
-- **Number of Posts Processed w.r.t STAGE**  
-  Shows how many posts were processed at each moderation stage.
-  *Note: If you see legacy names like `stage_lgbm`, update your DB or queries to use the new naming convention for consistency.*
-
-- **Average Processing Time by STAGE**  
-  Displays the average time (in seconds) taken by each moderation stage to process content. Useful for identifying bottlenecks (e.g., LLM stages are typically slower).
-
-- **Average Processing Time by Band**  
-  Shows average processing time grouped by moderation band.
-  
-- **Average Processing Time of Posts**  
-  Overall average time to process a post through the pipeline.
-
-- **Posts Processed per Hour**  
-  Time series chart showing moderation throughput and system activity trends.
-
-### Benefits of Real-Time Analytics
-
-- **Immediate Feedback:** Instantly see the impact of new rules, model updates, or traffic spikes.
-- **Bottleneck Detection:** Identify slow stages (e.g., LLM) and optimize for performance.
-- **Quality Assurance:** Monitor false positives/negatives and escalate issues quickly.
-- **Capacity Planning:** Track throughput and plan for scaling.
-- **Audit & Compliance:** Maintain a transparent record of moderation actions and timings.
-
-### How It Works
-
-- Moderation results and timings are stored in PostgreSQL after each post is processed.
-- Grafana queries the database and visualizes metrics in real time.
-- Dashboards can be customized for additional KPIs, alerting, or historical analysis.
 
 ---
 
@@ -198,7 +134,6 @@ GuardianAI provides real-time monitoring of the moderation pipeline using a Graf
    # Copy template and configure
    cp env.template .env
    # Edit .env with your API keys:
-   # HF_TOKEN=your_huggingface_token
    # GROQ_API_KEY=your_groq_api_key
    ```
 
@@ -226,7 +161,6 @@ GuardianAI provides real-time monitoring of the moderation pipeline using a Graf
 ```bash
 cd backend/benchmarkTesting
 python benchmark_testing.py    # Direct testing with import verification
-python run_benchmarks.py       # User-friendly runner with formatted output
 python content_analyzer.py     # Bulk content analysis from Excel/CSV files
 ```
 - Run comprehensive AI integration tests
@@ -262,7 +196,7 @@ python content_analyzer.py     # Bulk content analysis from Excel/CSV files
 | **Stage1_RuleBased** | Keywords + Regex | Rule-based filtering | Always available |
 | **Stage2_LGBM** | LightGBM | ML classification | Accept if model unavailable |
 | **Stage3_Detoxify** | Detoxify | Toxicity detection | Accept if model unavailable |
-| **Stage4_FinBert** | Mistral + FinGPT | External fraud detection | Heuristic-only fallback |
+| **Stage4_FinBert** | FinBERT | Financial sentiment analysis | Accept if model unavailable |
 | **Stage5_LLM** | Groq LLM | Chain-of-thought analysis | Context-based fallback |
 | **Database** | PostgreSQL | Content storage & analytics | N/A |
 | **Frontend** | HTML5 + JavaScript | User interface | N/A |
@@ -274,13 +208,11 @@ python content_analyzer.py     # Bulk content analysis from Excel/CSV files
 ### External Model Failures
 The system gracefully handles external API failures:
 
-1. **Mistral/FinGPT Unavailable**: Falls back to heuristic-only fraud detection
-2. **Groq LLM Unavailable**: Uses context from previous stages for decision making
-3. **Database Issues**: Returns cached results or graceful error responses
-4. **Network Timeouts**: Configurable timeouts with automatic retry logic
+1. **Groq LLM Unavailable**: Uses context from previous stages for decision making
+2. **Database Issues**: Returns cached results or graceful error responses
+3. **Network Timeouts**: Configurable timeouts with automatic retry logic
 
 ### Fallback Decision Logic
-- **Stage4_FinBert**: If both external models fail, uses heuristic patterns only
 - **Stage5_LLM**: If LLM unavailable, escalates content that was flagged by previous stages
 - **Overall**: System continues operating with reduced but functional capabilities
 
@@ -320,8 +252,8 @@ The system gracefully handles external API failures:
     "action": "FLAG_MEDIUM",
     "confidence": 0.75,
     "threat_level": "medium",
-    "stage": "stage4_finbert",
-    "reason": "finbert_model: ensemble: mistral_0.800_heuristic_0.700_fingpt_unavailable",
+    "stage": "Stage2_LGBM",
+    "reason": "lgbm_flag",
     "explanation": "Financial fraud indicators detected"
   }
 }
@@ -337,12 +269,49 @@ The system gracefully handles external API failures:
     "action": "PASS",
     "confidence": 0.85,
     "threat_level": "low",
-    "stage": "stage4_finbert",
-    "reason": "finbert_model: heuristic_only_clean",
+    "stage": "Stage5_LLM",
+    "reason": "llm: fallback_no_escalation",
     "explanation": "Content processed using available models only"
   }
 }
 ```
+
+---
+
+## 📊 Real-Time Moderation Analytics (Grafana + PostgreSQL)
+
+GuardianAI provides real-time monitoring of the moderation pipeline using a Grafana dashboard connected to the PostgreSQL database. This enables instant visibility into system performance, stage-wise processing, and moderation outcomes.
+
+### Example Dashboard
+
+![GuardianAI Moderation Dashboard](docs/grafana_dashboard_example.png)
+
+*Replace the image path above with your actual screenshot location if different.*
+
+### Dashboard Panels Explained
+
+- **Number of Posts Processed w.r.t STAGE**
+  - Shows how many posts were processed (blocked, escalated, or passed) at each moderation stage 
+- **Average Processing Time by STAGE**
+  - Displays the average time (in seconds) taken by each moderation stage to process content. Useful for identifying bottlenecks 
+- **Average Processing Time by Band**
+  - Shows average processing time grouped by moderation band 
+- **Average Processing Time of Posts**
+  - Overall average time to process a post through the pipeline.
+- **Posts Processed per Hour**
+  - Time series chart showing moderation throughput and system activity trends.
+
+### Benefits of Real-Time Analytics
+- **Immediate Feedback:** Instantly see the impact of new rules, model updates, or traffic spikes.
+- **Bottleneck Detection:** Identify slow stages (e.g., LLM) and optimize for performance.
+- **Quality Assurance:** Monitor false positives/negatives and escalate issues quickly.
+- **Capacity Planning:** Track throughput and plan for scaling.
+- **Audit & Compliance:** Maintain a transparent record of moderation actions and timings.
+
+### How It Works
+- Moderation results and timings are stored in PostgreSQL after each post is processed.
+- Grafana queries the database and visualizes metrics in real time.
+- Dashboards can be customized for additional KPIs, alerting, or historical analysis.
 
 ---
 
@@ -360,7 +329,7 @@ The system gracefully handles external API failures:
 - **RAM**: 8GB minimum
 - **Network**: Stable internet for external model APIs
 - **SSL**: HTTPS recommended for production
-- **API Keys**: Valid HuggingFace and Groq API keys
+- **API Keys**: Valid Groq API key
 
 ---
 
@@ -374,14 +343,12 @@ Key configuration files:
 
 ### Customizable Thresholds
 - **Toxicity Threshold**: 0.5 (adjustable)
-- **Fraud Ensemble Thresholds**: 0.2, 0.9 (adjustable)
 - **LLM Timeout**: 30 seconds (configurable)
 - **External API Timeouts**: 60 seconds (configurable)
 
 ### Environment Variables
 ```bash
 # Required for external models
-HF_TOKEN=your_huggingface_token
 GROQ_API_KEY=your_groq_api_key
 
 # Database configuration
@@ -417,7 +384,6 @@ DB_PASSWORD=your_password
 
 ---
 
-
 ## 🔒 Security & Compliance
 
 - ✅ Input validation and sanitization
@@ -441,9 +407,8 @@ MIT License - see LICENSE file for details
 ## 🔄 Recent Updates (v2.1)
 
 ### New Features
-- **Multi-Stage Pipeline**: Comprehensive 6-stage moderation process
+- **Multi-Stage Pipeline**: Comprehensive 5-stage moderation process
 - **Intelligent Fallback Logic**: System continues operating when external models fail
-- **External Model Integration**: Mistral and FinGPT for enhanced fraud detection
 - **LLM Escalation**: Chain-of-thought reasoning for complex cases
 - **Enhanced Error Handling**: Graceful degradation instead of complete failures
 
