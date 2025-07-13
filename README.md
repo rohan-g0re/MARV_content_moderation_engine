@@ -11,12 +11,11 @@
 
 GuardianAI is a sophisticated content moderation system designed for financial companies requiring precise risk assessment. It processes user-generated content through a multi-stage intelligent pipeline with robust fallback mechanisms:
 
-- **Stage 1**: Rule-based lexical filtering with 2,736+ keywords and advanced patterns
-- **Stage 2**: LGBM machine learning model for content classification
-- **Stage 3a**: Toxicity detection using Detoxify AI
-- **Stage 3b**: Multi-model fraud detection (Mistral + FinGPT + Heuristics)
-- **Stage 4**: LLM escalation with Chain-of-Thought reasoning
-- **Fallback Logic**: Intelligent handling of external model failures
+- **Stage1_RuleBased**: Heuristic/Lexical Filter (Regex/Fuzzy)
+- **Stage2_LGBM**: LightGBM ML Model
+- **Stage3_Detoxify**: Detoxify (Toxicity)
+- **Stage4_FinBert**: FinBERT (Sentiment)
+- **Stage5_LLM**: LLM Escalation (Chain-of-Thought, fallback)
 
 ### Key Benefits
 - ✅ **Robust Fallback System** - Continues operation when external models are unavailable
@@ -38,23 +37,23 @@ graph TD
     
     D --> E["🛡️ GuardianModerationEngine v2.1<br/>Multi-Stage Pipeline"]
     
-    E --> F["📋 Stage 1: Lexical Filter<br/>Keywords + Regex + Patterns"]
+    E --> F["📋 Stage1_RuleBased: Lexical Filter<br/>Heuristic + Regex + Patterns"]
     F --> G{"🔍 Suspicious Content?"}
     G -->|Yes| H["❌ BLOCK<br/>High Confidence"]
-    G -->|No| I["✅ Continue to Stage 2"]
+    G -->|No| I["✅ Continue to Stage2_LGBM"]
     
-    I --> J["🤖 Stage 2: LGBM ML<br/>Machine Learning Classification"]
+    I --> J["🤖 Stage2_LGBM: LGBM ML<br/>Machine Learning Classification"]
     J --> K{"🧠 ML Prediction"}
     K -->|BLOCK| L["❌ BLOCK<br/>High Confidence"]
     K -->|FLAG| M["⚠️ ESCALATE<br/>Medium Confidence"]
-    K -->|PASS| N["✅ Continue to Stage 3"]
+    K -->|PASS| N["✅ Continue to Stage3_Detoxify"]
     
-    N --> O["🧪 Stage 3a: Toxicity<br/>Detoxify AI Model"]
+    N --> O["🧪 Stage3_Detoxify: Toxicity<br/>Detoxify AI Model"]
     O --> P{"☠️ Toxic Content?"}
     P -->|Yes| Q["❌ BLOCK<br/>Toxicity Detected"]
-    P -->|No| R["✅ Continue to Stage 3b"]
+    P -->|No| R["✅ Continue to Stage4_FinBert"]
     
-    R --> S["💰 Stage 3b: Fraud Detection<br/>Multi-Model Ensemble"]
+    R --> S["💰 Stage4_FinBert: Sentiment<br/>FinBERT Model"]
     S --> T["🔍 Mistral Model"]
     S --> U["🔍 FinGPT Model"]
     S --> V["🔍 Heuristic Rules"]
@@ -76,9 +75,9 @@ graph TD
     CC --> DD{"🎯 Fraud Score"}
     DD -->|High ≥0.9| EE["❌ BLOCK<br/>Fraud Detected"]
     DD -->|Medium 0.2-0.9| FF["⚠️ ESCALATE<br/>Review Required"]
-    DD -->|Low ≤0.2| GG["✅ Continue to Stage 4"]
+    DD -->|Low ≤0.2| GG["✅ Continue to Stage5_LLM"]
     
-    GG --> HH["🧠 Stage 4: LLM Escalation<br/>Chain-of-Thought Analysis"]
+    GG --> HH["🧠 Stage5_LLM: LLM Escalation<br/>Chain-of-Thought Analysis"]
     HH --> II{"📡 Groq API Available?"}
     II -->|No| JJ["⚠️ Fallback Logic<br/>Check Previous Escalations"]
     II -->|Yes| KK["🧠 LLM Analysis"]
@@ -122,11 +121,54 @@ graph TD
 
 | Stage | Purpose | Models Used | Fallback Strategy |
 |-------|---------|-------------|-------------------|
-| **Stage 1** | Lexical Filtering | Keywords + Regex | Always available |
-| **Stage 2** | ML Classification | LGBM Model | Model loading fallback |
-| **Stage 3a** | Toxicity Detection | Detoxify AI | Accept if unavailable |
-| **Stage 3b** | Fraud Detection | Mistral + FinGPT | Heuristic-only fallback |
-| **Stage 4** | LLM Escalation | Groq LLM | Context-based fallback |
+| **Stage1_RuleBased** | Lexical Filtering | Keywords + Regex | Always available |
+| **Stage2_LGBM** | ML Classification | LGBM Model | Model loading fallback |
+| **Stage3_Detoxify** | Toxicity Detection | Detoxify AI | Accept if unavailable |
+| **Stage4_FinBert** | Sentiment Analysis | FinBERT Model | Accept if unavailable |
+| **Stage5_LLM** | LLM Escalation | Groq LLM | Context-based fallback |
+
+---
+
+## 📊 Real-Time Moderation Analytics (Grafana + PostgreSQL)
+
+GuardianAI provides real-time monitoring of the moderation pipeline using a Grafana dashboard connected to the PostgreSQL database. This enables instant visibility into system performance, stage-wise processing, and moderation outcomes.
+
+### Example Dashboard
+
+![GuardianAI Moderation Dashboard](docs/grafana_dashboard_example2.png)
+*Replace the image path above with your actual screenshot location if different.*
+
+### Dashboard Panels Explained
+
+- **Number of Posts Processed w.r.t STAGE**  
+  Shows how many posts were processed at each moderation stage.
+  *Note: If you see legacy names like `stage_lgbm`, update your DB or queries to use the new naming convention for consistency.*
+
+- **Average Processing Time by STAGE**  
+  Displays the average time (in seconds) taken by each moderation stage to process content. Useful for identifying bottlenecks (e.g., LLM stages are typically slower).
+
+- **Average Processing Time by Band**  
+  Shows average processing time grouped by moderation band.
+  
+- **Average Processing Time of Posts**  
+  Overall average time to process a post through the pipeline.
+
+- **Posts Processed per Hour**  
+  Time series chart showing moderation throughput and system activity trends.
+
+### Benefits of Real-Time Analytics
+
+- **Immediate Feedback:** Instantly see the impact of new rules, model updates, or traffic spikes.
+- **Bottleneck Detection:** Identify slow stages (e.g., LLM) and optimize for performance.
+- **Quality Assurance:** Monitor false positives/negatives and escalate issues quickly.
+- **Capacity Planning:** Track throughput and plan for scaling.
+- **Audit & Compliance:** Maintain a transparent record of moderation actions and timings.
+
+### How It Works
+
+- Moderation results and timings are stored in PostgreSQL after each post is processed.
+- Grafana queries the database and visualizes metrics in real time.
+- Dashboards can be customized for additional KPIs, alerting, or historical analysis.
 
 ---
 
@@ -217,11 +259,11 @@ python content_analyzer.py     # Bulk content analysis from Excel/CSV files
 | Component | Technology | Purpose | Fallback Strategy |
 |-----------|------------|---------|-------------------|
 | **Backend** | FastAPI + Python | High-performance async API | N/A |
-| **Stage 1** | Keywords + Regex | Rule-based filtering | Always available |
-| **Stage 2** | LightGBM | ML classification | Accept if model unavailable |
-| **Stage 3a** | Detoxify | Toxicity detection | Accept if model unavailable |
-| **Stage 3b** | Mistral + FinGPT | External fraud detection | Heuristic-only fallback |
-| **Stage 4** | Groq LLM | Chain-of-thought analysis | Context-based fallback |
+| **Stage1_RuleBased** | Keywords + Regex | Rule-based filtering | Always available |
+| **Stage2_LGBM** | LightGBM | ML classification | Accept if model unavailable |
+| **Stage3_Detoxify** | Detoxify | Toxicity detection | Accept if model unavailable |
+| **Stage4_FinBert** | Mistral + FinGPT | External fraud detection | Heuristic-only fallback |
+| **Stage5_LLM** | Groq LLM | Chain-of-thought analysis | Context-based fallback |
 | **Database** | PostgreSQL | Content storage & analytics | N/A |
 | **Frontend** | HTML5 + JavaScript | User interface | N/A |
 
@@ -238,8 +280,8 @@ The system gracefully handles external API failures:
 4. **Network Timeouts**: Configurable timeouts with automatic retry logic
 
 ### Fallback Decision Logic
-- **Stage 3b**: If both external models fail, uses heuristic patterns only
-- **Stage 4**: If LLM unavailable, escalates content that was flagged by previous stages
+- **Stage4_FinBert**: If both external models fail, uses heuristic patterns only
+- **Stage5_LLM**: If LLM unavailable, escalates content that was flagged by previous stages
 - **Overall**: System continues operating with reduced but functional capabilities
 
 ### Error Response Format
@@ -278,8 +320,8 @@ The system gracefully handles external API failures:
     "action": "FLAG_MEDIUM",
     "confidence": 0.75,
     "threat_level": "medium",
-    "stage": "stage3b",
-    "reason": "fraud_model: ensemble: mistral_0.800_heuristic_0.700_fingpt_unavailable",
+    "stage": "stage4_finbert",
+    "reason": "finbert_model: ensemble: mistral_0.800_heuristic_0.700_fingpt_unavailable",
     "explanation": "Financial fraud indicators detected"
   }
 }
@@ -295,8 +337,8 @@ The system gracefully handles external API failures:
     "action": "PASS",
     "confidence": 0.85,
     "threat_level": "low",
-    "stage": "stage3b",
-    "reason": "fraud_model: heuristic_only_clean",
+    "stage": "stage4_finbert",
+    "reason": "finbert_model: heuristic_only_clean",
     "explanation": "Content processed using available models only"
   }
 }
@@ -374,6 +416,7 @@ DB_PASSWORD=your_password
 - Verify database connection status
 
 ---
+
 
 ## 🔒 Security & Compliance
 

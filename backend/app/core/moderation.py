@@ -2,12 +2,11 @@
 GuardianAI Content Moderation Core Pipeline - Multi-Stage Architecture
 
 Stages:
-1. Stage 1 - Heuristic/Lexical Filter (Regex/Fuzzy)
-2. Stage LR - Logistic Regression ML
-3. Stage 2 - Detoxify (Toxicity)
-4. Stage 3a - FinBERT (Sentiment)
-5. Stage 3b - CiferAI/Heuristic (Fraud)
-6. LLM Escalation (Chain-of-Thought, fallback)
+1. Stage1_RuleBased - Heuristic/Lexical Filter (Regex/Fuzzy)
+2. Stage2_LGBM - LightGBM ML Model
+3. Stage3_Detoxify - Detoxify (Toxicity)
+4. Stage4_FinBERT - FinBERT (Sentiment)
+5. Stage5_LLM - LLM Escalation (Chain-of-Thought, fallback)
 """
 
 import re
@@ -92,14 +91,14 @@ class ModerationStage(ABC):
         pass
 
 # Stage 1: Heuristic/Lexical Filter
-class Stage1LexicalFilter(ModerationStage):
+class Stage1_RuleBased(ModerationStage):
     def __init__(self, keywords_file: str = "../data/external/words.json"):
         self.keywords_file = Path(keywords_file)
         self.scam_lexicon = self._load_scam_lexicon()
 
     @property
     def stage_name(self):
-        return "stage1"
+        return "Stage1_RuleBased"
 
     def _load_scam_lexicon(self) -> List[str]:
         try:
@@ -180,7 +179,7 @@ import pandas as pd
 import lightgbm as lgb  # <-- Make sure this import is at top level!
 from .features import extract_features  # or adjust if import path is different
 
-class StageLGBMModeration(ModerationStage):
+class Stage2_LGBM(ModerationStage):
     def __init__(self, model_path=None, support_path=None):
         # Base dir = backend/app/core
         base_dir = Path(__file__).resolve().parent
@@ -200,7 +199,7 @@ class StageLGBMModeration(ModerationStage):
 
     @property
     def stage_name(self):
-        return "stage_lgbm"
+        return "Stage2_LGBM"
 
     def process(self, text: str, context: Dict[str, Any] = None) -> ModerationResult:
         context = context or {}
@@ -227,7 +226,7 @@ class StageLGBMModeration(ModerationStage):
             return ModerationResult("ACCEPT", self.stage_name, "lgbm_passed", confidence, "low")
 
 # Stage 2: Detoxify Toxicity
-class Stage2ToxicityCheck(ModerationStage):
+class Stage3_Detoxify(ModerationStage):
     def __init__(self, toxicity_threshold: float = 0.5):
         self.toxicity_threshold = toxicity_threshold
         self.detoxify_classifier = None
@@ -235,7 +234,7 @@ class Stage2ToxicityCheck(ModerationStage):
 
     @property
     def stage_name(self):
-        return "stage2"
+        return "Stage3_Detoxify"
 
     def _initialize_model(self):
         try:
@@ -288,14 +287,14 @@ class Stage2ToxicityCheck(ModerationStage):
             )
 
 # Stage 3a: FinBERT Sentiment
-class Stage3aSentimentSentinels(ModerationStage):
+class Stage4_FinBert(ModerationStage):
     def __init__(self):
         self.finbert_classifier = None
         self._initialize_model()
 
     @property
     def stage_name(self):
-        return "stage3a"
+        return "Stage4_FinBert"
 
     def _initialize_model(self):
         try:
@@ -353,234 +352,14 @@ class Stage3aSentimentSentinels(ModerationStage):
                 threat_level="low"
             )
 
-# Stage3bFraudClassifier with Bilic/Mistral and Heuristics
-import os
-import requests
-import logging
-from typing import Tuple, Dict, Any
-
-logger = logging.getLogger(__name__)
-
-class Stage3bFraudClassifier(ModerationStage):
-    def __init__(self):
-        self.hf_token = os.getenv("HF_TOKEN")
-        logger.info("Stage3b using Mistral and FinGPT via HuggingFace API")
-
-    @property
-    def stage_name(self):
-        return "stage3b"
-
-    def _mistral_fraud_detection(self, text: str) -> Tuple[float, str]:
-        api_url = "https://api-inference.huggingface.co/models/Bilic/Mistral-7B-LLM-Fraud-Detection"
-        headers = {
-            "Authorization": f"Bearer {self.hf_token}",
-            "Content-Type": "application/json"
-        }
-        payload = {"inputs": text}
-        try:
-            response = requests.post(api_url, headers=headers, json=payload, timeout=60)
-            response.raise_for_status()
-            result = response.json()
-            if isinstance(result, list) and len(result) > 0:
-                label = result[0].get('label', '')
-                score = result[0].get('score', 0.0)
-                return float(score), f"mistral_{label}"
-            else:
-                logger.warning(f"Empty response from Mistral API: {result}")
-                return 0.0, "mistral_api_empty"
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 404:
-                logger.warning(f"Mistral model not found (404): {api_url}")
-                return 0.0, "mistral_api_404"
-            else:
-                logger.error(f"Mistral API HTTP error: {e}")
-                return 0.0, "mistral_api_http_error"
-        except requests.exceptions.Timeout:
-            logger.warning("Mistral API timeout")
-            return 0.0, "mistral_api_timeout"
-        except Exception as e:
-            logger.error(f"Mistral API error: {e}")
-            return 0.0, "mistral_api_error"
-
-    def _fingpt_fraud_detection(self, text: str) -> Tuple[float, str]:
-        api_url = "https://api-inference.huggingface.co/models/AI4Finance-Foundation/FinGPT-Llama3-8B"
-        headers = {
-            "Authorization": f"Bearer {self.hf_token}",
-            "Content-Type": "application/json"
-        }
-        payload = {"inputs": text}
-        try:
-            response = requests.post(api_url, headers=headers, json=payload, timeout=60)
-            response.raise_for_status()
-            result = response.json()
-            if isinstance(result, list) and len(result) > 0:
-                label = result[0].get('label', '')
-                score = result[0].get('score', 0.0)
-                return float(score), f"fingpt_{label}"
-            else:
-                logger.warning(f"Empty response from FinGPT API: {result}")
-                return 0.0, "fingpt_api_empty"
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 404:
-                logger.warning(f"FinGPT model not found (404): {api_url}")
-                return 0.0, "fingpt_api_404"
-            else:
-                logger.error(f"FinGPT API HTTP error: {e}")
-                return 0.0, "fingpt_api_http_error"
-        except requests.exceptions.Timeout:
-            logger.warning("FinGPT API timeout")
-            return 0.0, "fingpt_api_timeout"
-        except Exception as e:
-            logger.error(f"FinGPT API error: {e}")
-            return 0.0, "fingpt_api_error"
-
-    def _heuristic_fraud_detection(self, text: str) -> Tuple[float, str]:
-        text_lower = text.lower()
-        fraud_indicators = {
-            'high_confidence': [
-                'counterfeit', 'fake money', 'fake bills', 'undetectable',
-                'double your money', 'triple your money', 'get rich quick',
-                'loophole', 'legal loophole', 'guaranteed returns',
-                'high quality counterfeit', 'ping me for details'
-            ],
-            'medium_confidence': [
-                'investment opportunity', 'quick money', 'easy money',
-                'financial freedom', 'passive income', 'crypto investment',
-                'forex trading', 'binary options', 'pyramid scheme'
-            ],
-            'low_confidence': [
-                'investment', 'trading', 'profit', 'earn money',
-                'financial advice', 'money making', 'business opportunity'
-            ]
-        }
-        max_score = 0.0
-        matched_indicator = ""
-        for indicator in fraud_indicators['high_confidence']:
-            if indicator in text_lower:
-                return 0.9, f"heuristic_high_{indicator}"
-        for indicator in fraud_indicators['medium_confidence']:
-            if indicator in text_lower:
-                max_score = max(max_score, 0.7)
-                matched_indicator = indicator
-        low_indicators = [ind for ind in fraud_indicators['low_confidence'] if ind in text_lower]
-        if len(low_indicators) >= 2:
-            max_score = max(max_score, 0.5)
-            matched_indicator = f"multiple_low_{len(low_indicators)}"
-        return max_score, f"heuristic_{matched_indicator}" if matched_indicator else "heuristic_clean"
-
-    def _ensemble_voting(self, mistral_score: float, fingpt_score: float, heuristic_score: float, sentiment: str = None, sentiment_conf: float = 0.0) -> Tuple[float, str]:
-        ensemble_score = (mistral_score * 0.4) + (fingpt_score * 0.4) + (heuristic_score * 0.2)
-        reason = f"ensemble: mistral_{mistral_score:.3f}_fingpt_{fingpt_score:.3f}_heuristic_{heuristic_score:.3f}"
-        if sentiment:
-            reason += f"_sentiment_{sentiment}_{sentiment_conf:.3f}"
-        return ensemble_score, reason
-
-    def process(self, text: str, context: Dict[str, Any] = None) -> ModerationResult:
-        context = context or {}
-        sentiment = None
-        sentiment_conf = 0.0
-        if context and "stage3a" in context:
-            metadata = context["stage3a"].metadata
-            if metadata:
-                sentiment = metadata.get("sentiment")
-                sentiment_conf = metadata.get("sentiment_confidence", 0.0)
-        
-        # Get scores from external models with fallback logic
-        mistral_score, mistral_label = self._mistral_fraud_detection(text)
-        fingpt_score, fingpt_label = self._fingpt_fraud_detection(text)
-        heuristic_score, heuristic_pattern = self._heuristic_fraud_detection(text)
-        
-        # Check if external models are available
-        mistral_available = not any(error in mistral_label for error in ["mistral_api_error", "mistral_api_empty", "mistral_api_404", "mistral_api_http_error", "mistral_api_timeout"])
-        fingpt_available = not any(error in fingpt_label for error in ["fingpt_api_error", "fingpt_api_empty", "fingpt_api_404", "fingpt_api_http_error", "fingpt_api_timeout"])
-        
-        # Log availability status
-        if not mistral_available:
-            logger.warning("Mistral model unavailable, skipping external fraud detection")
-        if not fingpt_available:
-            logger.warning("FinGPT model unavailable, skipping external fraud detection")
-        
-        # If both external models are unavailable, use only heuristic
-        if not mistral_available and not fingpt_available:
-            logger.info("Both external models unavailable, using heuristic-only fraud detection")
-            if heuristic_score >= 0.9:
-                return ModerationResult(
-                    decision="BLOCK",
-                    stage=self.stage_name,
-                    reason=f"fraud_model: heuristic_only_{heuristic_pattern}",
-                    confidence=heuristic_score,
-                    threat_level="high"
-                )
-            elif heuristic_score <= 0.2:
-                return ModerationResult(
-                    decision="ACCEPT",
-                    stage=self.stage_name,
-                    reason="fraud_model: heuristic_only_clean",
-                    confidence=1.0 - heuristic_score,
-                    threat_level="low"
-                )
-            else:
-                return ModerationResult(
-                    decision="ESCALATE",
-                    stage=self.stage_name,
-                    reason=f"fraud_model: heuristic_only_uncertain_{heuristic_pattern}",
-                    confidence=heuristic_score,
-                    threat_level="medium"
-                )
-        
-        # If only one external model is available, adjust weights
-        if mistral_available and not fingpt_available:
-            # Use Mistral + Heuristic only
-            ensemble_score = (mistral_score * 0.6) + (heuristic_score * 0.4)
-            reason = f"ensemble: mistral_{mistral_score:.3f}_heuristic_{heuristic_score:.3f}_fingpt_unavailable"
-        elif fingpt_available and not mistral_available:
-            # Use FinGPT + Heuristic only
-            ensemble_score = (fingpt_score * 0.6) + (heuristic_score * 0.4)
-            reason = f"ensemble: fingpt_{fingpt_score:.3f}_heuristic_{heuristic_score:.3f}_mistral_unavailable"
-        else:
-            # Both available, use normal ensemble
-            ensemble_score, reason = self._ensemble_voting(
-                mistral_score, fingpt_score, heuristic_score, sentiment, sentiment_conf
-            )
-        
-        if sentiment:
-            reason += f"_sentiment_{sentiment}_{sentiment_conf:.3f}"
-        
-        if ensemble_score >= 0.9:
-            return ModerationResult(
-                decision="BLOCK",
-                stage=self.stage_name,
-                reason=f"fraud_model: {reason}",
-                confidence=ensemble_score,
-                threat_level="high"
-            )
-        elif ensemble_score <= 0.2:
-            return ModerationResult(
-                decision="ACCEPT",
-                stage=self.stage_name,
-                reason="fraud_model: clean",
-                confidence=1.0 - ensemble_score,
-                threat_level="low"
-            )
-        else:
-            return ModerationResult(
-                decision="ESCALATE",
-                stage=self.stage_name,
-                reason=f"fraud_model: uncertain_{reason}",
-                confidence=ensemble_score,
-                threat_level="medium"
-            )
-
-
-
 # Stage LLM Escalation
-class LLMEscalation(ModerationStage):
+class Stage5_LLM(ModerationStage):
     def __init__(self, groq_api_key: str = None):
         self.groq_api_key = groq_api_key or os.getenv("GROQ_API_KEY", "your_groq_api_key_here")
 
     @property
     def stage_name(self):
-        return "llm"
+        return "Stage5_LLM"
 
     def _call_llm_with_cot(self, text: str, context: Dict[str, Any] = None, llm_suggestion: str = None) -> Tuple[str, float]:
         context_info = ""
@@ -700,7 +479,7 @@ Instructions:
 
 # Pipeline builder
 
-def create_default_pipeline(keywords_file: str = "../data/external/words.json", groq_api_key: str = None) -> 'ModerationPipeline':
+def create_default_pipeline(keywords_file: str = "data/external/words.json", groq_api_key: str = None) -> 'ModerationPipeline':
     pipeline = ModerationPipeline()
 
     # Always resolve paths from THIS FILE location
@@ -708,12 +487,11 @@ def create_default_pipeline(keywords_file: str = "../data/external/words.json", 
     model_path = base_dir / "lgbm_moderation.txt"
     support_path = base_dir / "lgbm_support.pkl"
 
-    pipeline.register_stage(Stage1LexicalFilter(keywords_file))
-    pipeline.register_stage(StageLGBMModeration(model_path=model_path, support_path=support_path))
-    pipeline.register_stage(Stage2ToxicityCheck(toxicity_threshold=0.5))
-    pipeline.register_stage(Stage3aSentimentSentinels())
-    pipeline.register_stage(Stage3bFraudClassifier())
-    pipeline.register_stage(LLMEscalation(groq_api_key))
+    pipeline.register_stage(Stage1_RuleBased(keywords_file))
+    pipeline.register_stage(Stage2_LGBM(model_path=model_path, support_path=support_path))
+    pipeline.register_stage(Stage3_Detoxify(toxicity_threshold=0.5))
+    pipeline.register_stage(Stage4_FinBert())
+    pipeline.register_stage(Stage5_LLM(groq_api_key))
     return pipeline
 
 class ModerationPipeline:
