@@ -1,0 +1,60 @@
+# Core Backend Dependencies
+fastapi==0.104.1
+uvicorn==0.24.0
+pydantic
+python-multipart==0.0.6
+
+# AI/ML Dependencies
+transformers==4.35.2
+torch==2.7.1
+sentence-transformers
+numpy
+pandas
+scikit-learn
+detoxify==0.5.2
+
+matplotlib>=3.5.0
+seaborn>=0.11.0
+openpyxl>=3.0.0
+
+
+# Database Dependencies
+sqlalchemy==2.0.23
+psycopg2-binary
+alembic
+
+# API and HTTP
+requests
+aiohttp
+httpx
+
+# Environment and Configuration
+python-dotenv
+pydantic-settings
+
+# Logging and Monitoring
+structlog
+rich
+
+# Data Processing
+nltk
+spacy
+textblob
+
+# Development Dependencies
+pytest
+pytest-asyncio
+black
+flake8
+mypy
+
+# Security
+cryptography
+passlib[bcrypt]
+python-jose[cryptography]
+
+# Utilities
+python-dateutil
+tqdm
+click
+lightgbm

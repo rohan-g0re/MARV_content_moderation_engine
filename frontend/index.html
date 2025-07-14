@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Moderation System</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .input-section {
+            margin-bottom: 30px;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            resize: vertical;
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 5px;
+            display: none;
+        }
+        .accepted {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .rejected {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .status-accepted {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .status-rejected {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .refresh-btn {
+            background-color: #28a745;
+            margin-bottom: 20px;
+        }
+        .content-cell {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        /* Band and Action Styling */
+        .band-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+            color: white;
+            display: inline-block;
+            min-width: 80px;
+        }
+        
+        .band-safe { background-color: #28a745; }
+        .band-flag-low { background-color: #ffc107; color: #000; }
+        .band-flag-medium { background-color: #fd7e14; }
+        .band-flag-high { background-color: #dc3545; }
+        .band-block { background-color: #6f42c1; }
+        
+        .action-badge {
+            padding: 3px 6px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: bold;
+            text-align: center;
+            display: inline-block;
+            min-width: 60px;
+        }
+        
+        .action-pass { background-color: #d4edda; color: #155724; }
+        .action-flag { background-color: #fff3cd; color: #856404; }
+        .action-block { background-color: #f8d7da; color: #721c24; }
+        
+        .confidence-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+        
+        .confidence-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+            font-weight: bold;
+            color: #000;
+        }
+        
+        .result-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .detail-item {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        .detail-label {
+            font-size: 12px;
+            color: #6c757d;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧩 Content Moderation System</h1>
+        
+        <div class="input-section">
+            <label for="content"><strong>Enter your post content:</strong></label>
+            <textarea id="content" placeholder="Type your post content here..."></textarea>
+            <button id="submitBtn" onclick="moderateContent()">🚀 Submit for Moderation</button>
+        </div>
+        
+        <div id="loading" class="loading" style="display: none;">
+            <p>Moderating content...</p>
+        </div>
+        
+        <div id="result" class="result">
+            <h3>📋 Moderation Result</h3>
+            <div id="status"></div>
+            <div id="reason"></div>
+            <div id="explanation"></div>
+            <div id="suggestion"></div>
+            
+            <div class="result-details">
+                <div class="detail-item">
+                    <div class="detail-label">Financial Risk Band</div>
+                    <div id="band"></div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Action</div>
+                    <div id="action"></div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Confidence Score</div>
+                    <div id="confidence">
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" id="confidenceFill"></div>
+                            <div class="confidence-text" id="confidenceText">0%</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Processing Stage</div>
+                    <div id="stage"></div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Processing Time</div>
+                    <div id="processingTime" style="color: #28a745; font-weight: bold;"></div>
+                </div>
+                <div class="detail-item" style="display: flex; align-items: center;">
+                    <span style="font-size: 12px; color: #6c757d; font-weight: bold; text-transform: uppercase; margin-right: 12px;">Override Status</span>
+                    <div id="overrideSection" style="flex: 1;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; justify-content: flex-start; height: 100%; margin-bottom: 0;">
+                            <select id="overrideDropdown" style="font-size: 12px; color: #6c757d; font-weight: bold; text-transform: uppercase; padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc;">
+                                <option value="Accepted">Accepted</option>
+                                <option value="Rejected">Rejected</option>
+                                <option value="Flagged">Flagged</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="detail-item"
+                    style="display: flex;
+                           flex-direction: row;   
+                           align-items: center;      
+                           justify-content: flex-end;">
+                   <label style="font-size: 12px; color: #6c757d; font-weight: bold; text-transform: uppercase; margin-right: 12px;">
+                
+                   </label>
+                   <div>
+                       <span title="Thumbs Up" style="font-size: 2rem; cursor: pointer; margin-right: 12px;"> </span>
+                       <span title="Thumbs Down" style="font-size: 2rem; cursor: pointer;"> </span>
+                   </div>
+               </div>
+                </div>
+                <div class="detail-item" style="grid-column: 1 / span 2; margin-top: 0; display: flex; align-items: flex-end; gap: 8px;">
+                    <div style="flex: 1;">
+                        <label for="comments" style="font-size: 12px; color: #6c757d; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 4px;">Admin Comments</label>
+                        <textarea id="comments"
+                            maxlength="500"
+                            rows="1"
+                            style="width: 90%; font-size: 13px; border-radius: 4px; border: 1px solid #ccc; padding: 6px 6px; box-sizing: border-box; resize: none; height: 30px; overflow-y: hidden;"
+                            placeholder="Add any comments (max 500 characters)">
+                        </textarea>
+                    </div>
+                    <button id="saveCommentsBtn" style="height: 30px; width: 10%; font-size: 13px; font-weight: bold; background-color: #007bff; color: white; border: none; border-radius: 4px; margin-bottom: 0; cursor: pointer; padding: 0 24px; display: flex; align-items: center; justify-content: center;">SAVE</button>
+                </div>
+                <div id="commentsSaveMsg" style="margin-top: 4px; font-size: 12px; color: #28a745; display: none;"></div>
+            </div>
+        </div>
+        
+        <div id="error" class="error" style="display: none;"></div>
+    </div>
+
+    <div class="container">
+        <h2>📊 All Moderated Posts</h2>
+        <button class="refresh-btn" onclick="loadPosts()">🔄 Refresh Posts</button>
+        <div id="postsTable"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+        
+        async function moderateContent() {
+            const content = document.getElementById('content').value.trim();
+            const comments = document.getElementById('comments') ? document.getElementById('comments').value.trim() : '';
+            const submitBtn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            const error = document.getElementById('error');
+            
+            if (!content) {
+                showError('Please enter some content to moderate.');
+                return;
+            }
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            loading.style.display = 'block';
+            result.style.display = 'none';
+            error.style.display = 'none';
+            
+            try {
+                const response = await fetch(`${API_URL}/moderate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ content: content, comments: comments })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                showResult(data);
+                
+                // Refresh posts table
+                loadPosts();
+                
+            } catch (err) {
+                showError(`Error: ${err.message}. Make sure the backend is running on http://localhost:8000`);
+            } finally {
+                submitBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        }
+        
+        function showResult(data) {
+            const result = document.getElementById('result');
+            const status = document.getElementById('status');
+            const reason = document.getElementById('reason');
+            const explanation = document.getElementById('explanation');
+            const suggestion = document.getElementById('suggestion');
+            const band = document.getElementById('band');
+            const action = document.getElementById('action');
+            const confidenceFill = document.getElementById('confidenceFill');
+            const confidenceText = document.getElementById('confidenceText');
+            const stage = document.getElementById('stage');
+            const processingTime = document.getElementById('processingTime');
+
+            // Set status
+            if (data.accepted) {
+                status.innerHTML = '<h2 style="color: #28a745;">✅ ACCEPTED</h2>';
+                result.className = 'result accepted';
+            } else {
+                status.innerHTML = '<h2 style="color: #dc3545;">❌ REJECTED</h2>';
+                result.className = 'result rejected';
+            }
+
+            // Set reason
+            reason.innerHTML = `<p><strong>Reason:</strong> ${data.reason}</p>`;
+
+            // Set LLM explanation and suggestion if available
+            explanation.innerHTML = data.explanation ? `<p><strong>Explanation:</strong> ${data.explanation}</p>` : '';
+            suggestion.innerHTML = data.suggestion ? `<p><strong>Suggestion:</strong> <span style="background:#e7f6e7; border-radius:4px; padding:2px 6px;">${data.suggestion}</span></p>` : '';
+
+            // Set band with color coding
+            const bandClass = getBandClass(data.band);
+            band.innerHTML = `<span class="band-badge ${bandClass}">${data.band}</span>`;
+
+            // Set action with appropriate styling
+            const actionClass = getActionClass(data.action);
+            action.innerHTML = `<span class="action-badge ${actionClass}">${data.action}</span>`;
+
+            // Set confidence score with visual bar
+            const confidencePercent = Math.round(data.confidence * 100);
+            confidenceFill.style.width = `${confidencePercent}%`;
+            confidenceFill.style.backgroundColor = getConfidenceColor(data.confidence);
+            confidenceText.textContent = `${confidencePercent}%`;
+
+            // Set processing stage
+            stage.innerHTML = `<strong>${data.stage.toUpperCase()}</strong>`;
+
+            // Set processing time if available
+            if (data.processing_time !== undefined) {
+                const processingTimeDiv = document.getElementById('processingTime');
+                processingTimeDiv.innerHTML = `${data.processing_time.toFixed(3)}s`;
+                if (data.accepted) {
+                    processingTimeDiv.style.color = '#28a745'; // green
+                } else {
+                    processingTimeDiv.style.color = '#721c24'; // red
+                }
+            } else {
+                processingTime.innerHTML = 'N/A';
+            }
+
+            result.style.display = 'block';
+            
+            // Set up override functionality
+            setupOverrideFunctionality(data);
+
+            // Set comments field if present
+            const commentsField = document.getElementById('comments');
+            if (commentsField) {
+                commentsField.value = data.comments || '';
+            }
+        }
+        
+        function setupOverrideFunctionality(data) {
+            const overrideDropdown = document.getElementById('overrideDropdown');
+            // Determine the default moderation output
+            let defaultValue = 'Rejected';
+            if (data.accepted) {
+                defaultValue = 'Accepted';
+            } else if (data.action && data.action.toLowerCase().includes('flag')) {
+                defaultValue = 'Flagged';
+            }
+            overrideDropdown.value = data.override === 'Yes' ? (data.action && data.action.toLowerCase().includes('flag') ? 'Flagged' : (data.accepted ? 'Accepted' : 'Rejected')) : defaultValue;
+            // Store current post data for override
+            window.currentPostData = data;
+            // Remove any existing event listeners and add new one
+            overrideDropdown.removeEventListener('change', handleOverrideDropdownChange);
+            overrideDropdown.addEventListener('change', handleOverrideDropdownChange);
+            // Store the default value for comparison
+            overrideDropdown.dataset.defaultValue = defaultValue;
+        }
+        
+        function handleOverrideDropdownChange() {
+            applyOverrideDropdown();
+        }
+        
+        async function applyOverrideDropdown() {
+            const overrideDropdown = document.getElementById('overrideDropdown');
+            if (!window.currentPostData) return;
+            const selectedValue = overrideDropdown.value;
+            const defaultValue = overrideDropdown.dataset.defaultValue;
+            try {
+                overrideDropdown.disabled = true;
+                const response = await fetch(`${API_URL}/override`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        post_id: window.currentPostData.id,
+                        override_value: selectedValue
+                    })
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const result = await response.json();
+                if (result.success) {
+                    // Fetch the updated post from the backend and update the UI
+                    const updatedPostId = window.currentPostData.id;
+                    fetch(`${API_URL}/posts`)
+                        .then(res => res.json())
+                        .then(posts => {
+                            const updatedPost = posts.find(p => p.id === updatedPostId);
+                            if (updatedPost) {
+                                showResult(updatedPost);
+                            }
+                            loadPosts();
+                            showSuccess(result.message);
+                        });
+                }
+            } catch (err) {
+                showError(`Override failed: ${err.message}`);
+            } finally {
+                overrideDropdown.disabled = false;
+            }
+        }
+        
+        function updateStatusDisplay(newStatus) {
+            console.log('Updating status display to:', newStatus);
+            const status = document.getElementById('status');
+            const result = document.getElementById('result');
+            
+            if (newStatus) {
+                status.innerHTML = '<h2 style="color: #28a745;">✅ ACCEPTED</h2>';
+                result.className = 'result accepted';
+            } else {
+                status.innerHTML = '<h2 style="color: #dc3545;">❌ REJECTED</h2>';
+                result.className = 'result rejected';
+            }
+            console.log('Status display updated');
+        }
+        
+        function showSuccess(message) {
+            const successDiv = document.createElement('div');
+            successDiv.style.cssText = 'background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 15px; border-radius: 5px; margin-top: 20px;';
+            successDiv.textContent = message;
+            
+            const result = document.getElementById('result');
+            result.appendChild(successDiv);
+            
+            // Remove success message after 3 seconds
+            setTimeout(() => {
+                if (successDiv.parentNode) {
+                    successDiv.parentNode.removeChild(successDiv);
+                }
+            }, 3000);
+        }
+        
+        async function viewPost(postId) {
+            try {
+                const response = await fetch(`${API_URL}/posts`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const posts = await response.json();
+                const post = posts.find(p => p.id === postId);
+                
+                if (post) {
+                    // Show the post in the result section
+                    showResult(post);
+                    
+                    // Scroll to the result section
+                    document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    showError('Post not found');
+                }
+                
+            } catch (err) {
+                console.error('Error viewing post:', err);
+                showError('Error loading post details');
+            }
+        }
+
+        
+        function getBandClass(band) {
+            const bandClasses = {
+                'SAFE': 'band-safe',
+                'FLAG_LOW': 'band-flag-low',
+                'FLAG_MEDIUM': 'band-flag-medium',
+                'FLAG_HIGH': 'band-flag-high',
+                'BLOCK': 'band-block'
+            };
+            return bandClasses[band] || 'band-safe';
+        }
+        
+        function getActionClass(action) {
+            if (action === 'PASS') return 'action-pass';
+            if (action === 'BLOCK') return 'action-block';
+            return 'action-flag'; // For FLAG_LOW, FLAG_MEDIUM, FLAG_HIGH
+        }
+        
+        function getConfidenceColor(confidence) {
+            if (confidence < 0.2) return '#28a745'; // Green
+            if (confidence < 0.4) return '#ffc107'; // Yellow
+            if (confidence < 0.6) return '#fd7e14'; // Orange
+            if (confidence < 0.8) return '#dc3545'; // Red
+            return '#6f42c1'; // Purple for very high confidence
+        }
+        
+        function showError(message) {
+            const error = document.getElementById('error');
+            error.textContent = message;
+            error.style.display = 'block';
+        }
+        
+        async function loadPosts() {
+            try {
+                const response = await fetch(`${API_URL}/posts`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const posts = await response.json();
+                displayPosts(posts);
+                
+            } catch (err) {
+                console.error('Error loading posts:', err);
+                document.getElementById('postsTable').innerHTML = '<p style="color: red;">Error loading posts</p>';
+            }
+        }
+        
+        function displayPosts(posts) {
+            const tableDiv = document.getElementById('postsTable');
+            
+            if (posts.length === 0) {
+                tableDiv.innerHTML = '<p>No posts found.</p>';
+                return;
+            }
+            
+            let tableHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Content</th>
+                            <th>Status</th>
+                            <th>Band</th>
+                            <th>Action</th>
+                            <th>Confidence</th>
+                            <th>Processing Time</th>
+                            <th>Status Override</th>
+                            <th>Reason</th>
+                            <th>Created At</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            posts.forEach(post => {
+                const statusClass = post.accepted ? 'status-accepted' : 'status-rejected';
+                const statusText = post.accepted ? '✅ Accepted' : '❌ Rejected';
+                const date = new Date(post.created_at).toLocaleString();
+                
+                // Get band and action with fallbacks for older entries
+                const band = post.band || 'SAFE';
+                const action = post.action || 'PASS';
+                const confidence = post.confidence || 1.0;
+                const processingTime = post.processing_time || 0.0;
+                const override = post.override || 'No';
+                
+                const bandClass = getBandClass(band);
+                const actionClass = getActionClass(action);
+                const confidencePercent = Math.round(confidence * 100);
+                
+                // Override badge styling
+                const overrideBadge = override === 'Yes' 
+                    ? '<span style="background-color: #dc3545; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold;">Yes</span>'
+                    : '<span style="background-color: #6c757d; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold;">No</span>';
+                
+                tableHTML += `
+                    <tr>
+                        <td>${post.id}</td>
+                        <td class="content-cell" title="${post.content}">${post.content}</td>
+                        <td class="${statusClass}">${statusText}</td>
+                        <td><span class="band-badge ${bandClass}">${band}</span></td>
+                        <td><span class="action-badge ${actionClass}">${action}</span></td>
+                        <td style="text-align: center; font-weight: bold;">${confidencePercent}%</td>
+                        <td style="text-align: center; font-weight: bold;">${processingTime.toFixed(3)}s</td>
+                        <td style="text-align: center;">${overrideBadge}</td>
+                        <td>${post.reason}</td>
+                        <td>${date}</td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += '</tbody></table>';
+            tableDiv.innerHTML = tableHTML;
+        }
+        
+        // Load posts on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPosts();
+            
+            // Initialize override dropdown event listener
+            const overrideDropdown = document.getElementById('overrideDropdown');
+            if (overrideDropdown) {
+                overrideDropdown.removeEventListener('change', handleOverrideDropdownChange);
+                overrideDropdown.addEventListener('change', handleOverrideDropdownChange);
+                console.log('Override dropdown event listener initialized');
+            }
+
+            // Auto-expand comments textarea
+            const commentsField = document.getElementById('comments');
+            if (commentsField) {
+                commentsField.addEventListener('input', function() {
+                    this.style.height = '24px';
+                    this.style.height = (this.scrollHeight) + 'px';
+                });
+            }
+            // Save comments button logic
+            const saveBtn = document.getElementById('saveCommentsBtn');
+            if (saveBtn && commentsField) {
+                saveBtn.addEventListener('click', async function() {
+                    if (!window.currentPostData) return;
+                    const postId = window.currentPostData.id;
+                    const comments = commentsField.value.trim();
+                    saveBtn.disabled = true;
+                    const msgDiv = document.getElementById('commentsSaveMsg');
+                    msgDiv.style.display = 'none';
+                    try {
+                        const response = await fetch(`${API_URL}/save_comments`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ post_id: postId, comments: comments })
+                        });
+                        if (!response.ok) throw new Error('Failed to save comments');
+                        msgDiv.textContent = 'Comments saved!';
+                        msgDiv.style.color = '#28a745';
+                        msgDiv.style.display = 'block';
+                    } catch (err) {
+                        msgDiv.textContent = 'Failed to save comments.';
+                        msgDiv.style.color = '#dc3545';
+                        msgDiv.style.display = 'block';
+                    } finally {
+                        saveBtn.disabled = false;
+                    }
+                });
+            }
+        });
+        
+        // Allow Enter key to submit
+        document.getElementById('content').addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                moderateContent();
+            }
+        });
+    </script>
+</body>
+</html> 

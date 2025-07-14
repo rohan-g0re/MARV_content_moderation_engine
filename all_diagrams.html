@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Moderation Engine - Updated Architecture Diagrams</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+
+        .upgrade-badge {
+            background: linear-gradient(45deg, #ff6b6b, #ffa726);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            display: inline-block;
+            margin: 10px 5px;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-number {
+            font-size: 1.8em;
+            font-weight: bold;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .diagram-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 40px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .diagram-title {
+            color: #2c3e50;
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .diagram-description {
+            color: #7f8c8d;
+            margin-bottom: 25px;
+            font-size: 1.1em;
+            line-height: 1.6;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .new-feature {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+
+        .mermaid {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+        }
+
+        .back-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            font-size: 18px;
+        }
+
+        .back-to-top:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .stats {
+                gap: 15px;
+            }
+            
+            .diagram-container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🛡️ Content Moderation Engine v2.0</h1>
+            <p class="subtitle">Enhanced Architecture with 5-Layer Band System</p>
+            <div style="margin: 15px 0;">
+                <span class="upgrade-badge">📊 Action Classification</span>
+                <span class="upgrade-badge">🎨 Enhanced UI</span>
+                <span class="upgrade-badge">💾 Extended Database</span>
+                <span class="upgrade-badge">🎯 Real time analytics</span>
+            </div>
+            <div class="stats">
+                <div class="stat-item">
+                    <span class="stat-number">5</span>
+                    <span class="stat-label">ModerationStages</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">5</span>
+                    <span class="stat-label">Risk Bands</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">2736</span>
+                    <span class="stat-label">Keywords</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">100%</span>
+                    <span class="stat-label">Coverage</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Diagram 1: Enhanced System Overview -->
+        <div class="diagram-container">
+            <h2 class="diagram-title">🌟 Enhanced System Flow with 5-Stage Pipeline<span class="new-feature">NEW</span></h2>
+            <div class="diagram-description">
+                <strong>Complete user journey</strong> with the new 5-stage moderation pipeline (Stage1_RuleBased, Stage2_LGBM, Stage3_Detoxify, Stage4_FinBert, Stage5_LLM) and enhanced action classification. Shows sophisticated risk assessment and visual feedback.
+            </div>
+            <div class="mermaid">
+graph TD
+    A["🌐 Frontend<br/>index.html<br/>Enhanced UI"] --> B["📤 User Input<br/>Content Submission"]
+    B --> C["🚀 HTTP POST Request<br/>/moderate"]
+    C --> D["⚡ FastAPI Server<br/>main.py:app"]
+    
+    D --> E["🛡️ GuardianModerationEngine v2.1<br/>core/moderation.py"]
+    
+    E --> F["📋 Stage1_RuleBased<br/>Keywords + Regex"]
+    F --> G{"🔍 Keywords/Patterns Found?"}
+    G -->|Yes| H["❌ BLOCK<br/>Band: BLOCK<br/>Action: BLOCK<br/>Threat: High"]
+    G -->|No| I["✅ Continue to Stage2_LGBM"]
+    
+    I --> J["🤖 Stage2_LGBM<br/>LightGBM ML Model"]
+    J --> K{"🧠 ML Prediction<br/>0=PASS, 1=FLAG, 2=BLOCK"}
+    K -->|BLOCK| L["❌ BLOCK<br/>Band: BLOCK<br/>Action: BLOCK<br/>Threat: High"]
+    K -->|FLAG| M["⚠️ ESCALATE<br/>Band: WARNING<br/>Action: FLAG_MEDIUM<br/>Threat: Medium"]
+    K -->|PASS| N["✅ Continue to Stage3_Detoxify"]
+    
+    N --> O["🧪 Stage3_Detoxify<br/>Toxicity Detection"]
+    O --> P{"☠️ Toxic Content<br/>Score > 0.5?"}
+    P -->|Yes| Q["❌ BLOCK<br/>Band: BLOCK<br/>Action: BLOCK<br/>Threat: Medium/High"]
+    P -->|No| R["✅ Continue to Stage4_FinBert"]
+    
+    R --> S["💰 Stage4_FinBert<br/>Financial Sentiment Analysis"]
+    S --> T["📊 Sentiment Analysis"]
+    T --> U{"📈 Sentiment Score"}
+    U -->|Negative High| V["⚠️ ESCALATE<br/>Band: WARNING<br/>Action: FLAG_MEDIUM<br/>Threat: Low"]
+    U -->|Neutral/Positive| W["✅ Continue to Stage5_LLM"]
+    
+    W --> X["🧠 Stage5_LLM<br/>Chain-of-Thought Analysis"]
+    X --> Y{"📡 Groq API Available?"}
+    Y -->|No| Z["⚠️ Fallback Logic<br/>Check Previous Escalations"]
+    Y -->|Yes| AA["🧠 LLM Analysis"]
+    
+    Z --> BB{"🔍 Previous Escalations?"}
+    BB -->|Yes| CC["❌ BLOCK<br/>Band: WARNING<br/>Action: BLOCK<br/>Threat: Medium"]
+    BB -->|No| DD["✅ ACCEPT<br/>Band: SAFE<br/>Action: PASS<br/>Threat: Low"]
+    
+    AA --> EE{"🧠 LLM Decision"}
+    EE -->|FRAUD| FF["❌ BLOCK<br/>Band: BLOCK<br/>Action: BLOCK<br/>Threat: High"]
+    EE -->|CLEAN| GG["✅ ACCEPT<br/>Band: SAFE<br/>Action: PASS<br/>Threat: Low"]
+    EE -->|UNCERTAIN| HH["❌ BLOCK<br/>Band: WARNING<br/>Action: BLOCK<br/>Threat: Medium"]
+    
+    H --> II["💾 Enhanced Database<br/>PostgreSQL + Band/Action"]
+    L --> II
+    M --> II
+    Q --> II
+    V --> II
+    CC --> II
+    DD --> II
+    FF --> II
+    GG --> II
+    HH --> II
+    
+    II --> JJ["📊 Enhanced Response<br/>ModerationResponse v2.1"]
+    JJ --> KK["🔄 Updated Frontend<br/>Band Badges + Confidence Bars"]
+    
+    LL["📁 data/external/words.json<br/>2736 Keywords"] --> F
+    MM["🗄️ PostgreSQL<br/>Enhanced Schema"] --> II
+    
+    style A fill:#e1f5fe
+    style D fill:#f3e5f5
+    style E fill:#fff3e0
+    style S fill:#fff8e1
+    style DD fill:#c8e6c9
+    style GG fill:#c8e6c9
+    style M fill:#fff3cd
+    style V fill:#fff3cd
+    style CC fill:#ffcdd2
+    style FF fill:#ffcdd2
+    style HH fill:#ffcdd2
+    style II fill:#f3e5f5
+    style KK fill:#e8f5e8
+            </div>
+        </div>
+
+        <!-- Diagram 2: Enhanced Engine Pipeline -->
+        <div class="diagram-container">
+            <h2 class="diagram-title">🔧 Advanced 5-Stage Moderation Pipeline<span class="new-feature">ENHANCED</span></h2>
+            <div class="diagram-description">
+                <strong>Detailed internal processing</strong> showing the new 5-stage pipeline with Stage1_RuleBased, Stage2_LGBM, Stage3_Detoxify, Stage4_FinBert, and Stage5_LLM. Includes sophisticated risk assessment and fallback logic.
+            </div>
+            <div class="mermaid">
+graph TD
+    A["🛡️ GuardianModerationEngine.moderate_content()"] --> B["📝 Input: Content String"]
+    
+    B --> C["🔴 Stage1_RuleBased"]
+    C --> D["📚 Load Keywords from<br/>data/external/words.json<br/>(2736 keywords)"]
+    D --> E["🔍 Fuzzy Keyword Matching"]
+    E --> F["🎯 Enhanced Regex Patterns<br/>URLs, Crypto Addresses, Threats"]
+    F --> G{"❓ Rule Violations?"}
+    
+    G -->|Yes| H["❌ Return ModerationResult<br/>accepted=False<br/>stage='Stage1_RuleBased'<br/>threat_level='high'<br/>band='BLOCK'<br/>action='BLOCK'<br/>confidence=0.9"]
+    
+    G -->|No| I["🟡 Stage2_LGBM"]
+    I --> J["🤖 Initialize LightGBM Model<br/>lgbm_moderation.txt"]
+    J --> K["🧠 Feature Extraction"]
+    K --> L["📊 ML Classification<br/>0=PASS, 1=FLAG, 2=BLOCK"]
+    L --> M{"🎚️ Prediction Class"}
+    
+    M -->|2 (BLOCK)| N["❌ Return ModerationResult<br/>accepted=False<br/>stage='Stage2_LGBM'<br/>threat_level='high'<br/>band='BLOCK'<br/>action='BLOCK'<br/>confidence=score"]
+    M -->|1 (FLAG)| O["⚠️ Return ModerationResult<br/>accepted=False<br/>stage='Stage2_LGBM'<br/>threat_level='medium'<br/>band='WARNING'<br/>action='FLAG_MEDIUM'<br/>confidence=score"]
+    M -->|0 (PASS)| P["✅ Continue to Stage3_Detoxify"]
+    
+    P --> Q["🟢 Stage3_Detoxify"]
+    Q --> R["🤖 Initialize Detoxify Model<br/>unitary/toxic-bert"]
+    R --> S["🧠 Toxicity Classification"]
+    S --> T["📊 Get Toxicity Score (0-1)"]
+    T --> U{"🎚️ Score > threshold<br/>(0.5)?"}
+    
+    U -->|Yes| V["❌ Return ModerationResult<br/>accepted=False<br/>stage='Stage3_Detoxify'<br/>threat_level='medium/high'<br/>band='BLOCK'<br/>action='BLOCK'<br/>confidence=score"]
+    
+    U -->|No| W["🟢 Stage4_FinBert"]
+    W --> X["💰 Initialize FinBERT Model<br/>ProsusAI/finbert"]
+    X --> Y["📈 Financial Sentiment Analysis"]
+    Y --> Z["📊 Get Sentiment + Confidence"]
+    Z --> AA{"📉 Negative Sentiment?"}
+    
+    AA -->|No| BB["🟢 Non-Financial Content<br/>band='SAFE'<br/>action='PASS'<br/>threat_level='low'"]
+    
+    AA -->|Yes| CC["🎯 Sentiment Analysis"]
+    CC --> DD["📊 Sentiment Classification"]
+    
+    DD --> EE["🟢 SAFE Band<br/>Sentiment: Positive/Neutral<br/>action='PASS'<br/>threat_level='low'"]
+    DD --> FF["🟡 WARNING Band<br/>Sentiment: Negative Low<br/>action='FLAG_MEDIUM'<br/>threat_level='low'"]
+    
+    GG["🟢 Stage5_LLM"]
+    GG --> HH["🧠 Initialize Groq LLM<br/>llama3-8b-8192"]
+    HH --> II["📝 Chain-of-Thought Analysis"]
+    II --> JJ["📊 LLM Decision<br/>FRAUD/CLEAN/UNCERTAIN"]
+    JJ --> KK{"🎯 LLM Result"}
+    
+    KK -->|FRAUD| LL["❌ Return ModerationResult<br/>accepted=False<br/>stage='Stage5_LLM'<br/>threat_level='high'<br/>band='BLOCK'<br/>action='BLOCK'<br/>confidence=0.9"]
+    KK -->|CLEAN| MM["✅ Return ModerationResult<br/>accepted=True<br/>stage='Stage5_LLM'<br/>threat_level='low'<br/>band='SAFE'<br/>action='PASS'<br/>confidence=0.9"]
+    KK -->|UNCERTAIN| NN["❌ Return ModerationResult<br/>accepted=False<br/>stage='Stage5_LLM'<br/>threat_level='medium'<br/>band='WARNING'<br/>action='BLOCK'<br/>confidence=0.5"]
+    
+    OO["⚙️ Enhanced Configuration"] --> PP["🎚️ toxicity_threshold = 0.5<br/>🎚️ lgbm_model_path = lgbm_moderation.txt<br/>🎚️ groq_timeout = 30s<br/>🎯 5-stage pipeline system"]
+    PP --> U
+    PP --> DD
+    PP --> KK
+    
+    style C fill:#ffebee
+    style I fill:#e8f5e8
+    style Q fill:#fff8e1
+    style W fill:#e1f5fe
+    style GG fill:#f3e5f5
+    style H fill:#ffcdd2
+    style N fill:#ffcdd2
+    style V fill:#ffcdd2
+    style LL fill:#ffcdd2
+    style NN fill:#ffcdd2
+    style O fill:#fff3cd
+    style FF fill:#fff3cd
+    style BB fill:#c8e6c9
+    style MM fill:#c8e6c9
+            </div>
+        </div>
+
+        <!-- Diagram 3: Enhanced Sequence -->
+        <div class="diagram-container">
+            <h2 class="diagram-title">🔄 Advanced 5-Stage Interaction Sequence<span class="new-feature">UPDATED</span></h2>
+            <div class="diagram-description">
+                <strong>Real-time communication flow</strong> with enhanced 5-stage pipeline, action determination, and visual feedback including confidence bars and band badges in the frontend.
+            </div>
+            <div class="mermaid">
+sequenceDiagram
+    participant User as 👤 User
+    participant Frontend as 🌐 Frontend v2.1<br/>(Enhanced UI)
+    participant API as ⚡ FastAPI Server<br/>(main.py)
+    participant Engine as 🛡️ ModerationEngine v2.1<br/>(moderation.py)
+    participant DB as 🗄️ Enhanced Database<br/>(band + action columns)
+    participant Keywords as 📁 Keywords File<br/>(2736 words)
+    participant LGBM as 🤖 LightGBM Model<br/>(lgbm_moderation.txt)
+    participant Detoxify as 🧪 Detoxify AI<br/>(toxic-bert)
+    participant FinBert as 💰 FinBERT<br/>(finbert)
+    participant LLM as 🧠 Groq LLM<br/>(llama3-8b)
+    
+    User->>Frontend: Enter content in enhanced form
+    User->>Frontend: Click "🚀 Submit for Moderation"
+    
+    Frontend->>Frontend: Enhanced validation & loading state
+    Frontend->>API: POST /moderate<br/>{"content": "user text"}
+    
+    API->>Engine: moderate_content(content)
+    
+    Engine->>Keywords: Load enhanced keyword list
+    Keywords-->>Engine: Return 2736 keywords
+    
+    Engine->>Engine: Stage1_RuleBased: Enhanced rule-based check
+    
+    alt Rule violation found
+        Engine-->>API: ModerationResult(band="BLOCK", action="BLOCK")
+    else No rule violation
+        Engine->>LGBM: Stage2_LGBM: LightGBM classification
+        LGBM-->>Engine: ML prediction (0/1/2)
+        
+        alt Prediction = 2 (BLOCK)
+            Engine-->>API: ModerationResult(band="BLOCK", action="BLOCK")
+        else Prediction = 1 (FLAG)
+            Engine-->>API: ModerationResult(band="WARNING", action="FLAG_MEDIUM")
+        else Prediction = 0 (PASS)
+            Engine->>Detoxify: Stage3_Detoxify: Toxicity check
+            Detoxify-->>Engine: Toxicity score
+            
+            alt High toxicity
+                Engine-->>API: ModerationResult(band="BLOCK", action="BLOCK")
+            else Low toxicity
+                Engine->>FinBert: Stage4_FinBert: Sentiment analysis
+                FinBert-->>Engine: Financial sentiment + confidence
+                
+                alt Negative sentiment
+                    Engine-->>API: ModerationResult(band="WARNING", action="FLAG_MEDIUM")
+                else Positive/Neutral sentiment
+                    Engine->>LLM: Stage5_LLM: Chain-of-thought analysis
+                    LLM-->>Engine: LLM decision (FRAUD/CLEAN/UNCERTAIN)
+                    
+                    alt LLM = FRAUD
+                        Engine-->>API: ModerationResult(band="BLOCK", action="BLOCK")
+                    else LLM = CLEAN
+                        Engine-->>API: ModerationResult(band="SAFE", action="PASS")
+                    else LLM = UNCERTAIN
+                        Engine-->>API: ModerationResult(band="WARNING", action="BLOCK")
+                    end
+                end
+            end
+        end
+    end
+    
+    API->>DB: Save enhanced Post with band/action
+    DB-->>API: Return post ID
+    
+    API-->>Frontend: Enhanced ModerationResponse<br/>{accepted, reason, band, action, confidence, etc}
+    
+    Frontend->>Frontend: Display enhanced result UI
+    Frontend->>Frontend: Show band badge with color coding
+    Frontend->>Frontend: Display confidence bar visualization
+    Frontend->>Frontend: Update action status with styling
+    
+    Frontend->>API: GET /posts (refresh enhanced table)
+    API->>DB: Query posts with band/action data
+    DB-->>API: Return enhanced posts array
+    API-->>Frontend: Posts with band/action metadata
+    Frontend->>Frontend: Update table with band badges & confidence
+    
+    Note over User,AI: Complete enhanced moderation cycle<br/>with 5-layer band classification
+            </div>
+        </div>
+
+        <!-- Diagram 4: Enhanced Database Operations -->
+        <div class="diagram-container">
+            <h2 class="diagram-title">💾 Enhanced Database Schema & Operations<span class="new-feature">EXTENDED</span></h2>
+            <div class="diagram-description">
+                <strong>Extended data persistence</strong> with new band and action columns, enhanced statistics with band breakdown, and comprehensive metadata tracking for the 5-stage classification system.
+            </div>
+            <div class="mermaid">
+graph TD
+    A["🚀 FastAPI Application Startup"] --> B["🗄️ Initialize PostgreSQL<br/>content_moderation"]
+    
+    B --> C["📋 Create Enhanced Post Table"]
+    C --> D["🏗️ Enhanced Table: posts<br/>- id (Primary Key)<br/>- content (Text)<br/>- accepted (Boolean)<br/>- reason (Text)<br/>- threat_level (String)<br/>- confidence (String)<br/>🆕 band (String)<br/>🆕 action (String)<br/>- stage (String)<br/>- created_at (DateTime)"]
+    
+    E["📤 Enhanced Moderation Request"] --> F["🛡️ Process with 5-Stage Pipeline"]
+    F --> G["📊 Get Enhanced ModerationResult"]
+    G --> H["💾 Create Enhanced Post Object"]
+    
+    H --> I["🔄 Database Session"]
+    I --> J["➕ Add Post with Band/Action"]
+    J --> K["💾 Commit Enhanced Transaction"]
+    K --> L["🔄 Refresh Post (get ID)"]
+    L --> M["🔐 Close Session"]
+    
+    M --> N["📈 Enhanced API Endpoints"]
+    
+    N --> O["📚 GET /posts<br/>Enhanced Post Retrieval"]
+    N --> P["📊 GET /stats<br/>Band-Aware Statistics"] 
+    N --> Q["🏠 GET /<br/>Enhanced System Status"]
+    N --> R["🏥 GET /health<br/>Model Status Check"]
+    
+    O --> S["🔍 Query Enhanced Posts<br/>WITH band/action data<br/>ORDER BY created_at DESC"]
+    P --> T["📈 Calculate Enhanced Stats<br/>- Total posts<br/>- Accepted/Rejected counts<br/>- Acceptance rate<br/>- Breakdown by stage<br/>- Threat level distribution<br/>🆕 Band breakdown<br/>🆕 Action statistics"]
+    
+    S --> U["📋 Return Enhanced JSON<br/>Posts with band badges"]
+    T --> V["📊 Return Comprehensive Stats<br/>Including band analytics"]
+    
+    W["🔧 Enhanced Admin Endpoints"] --> X["🔄 POST /admin/reload-keywords<br/>Refresh 2736 keywords"]
+    W --> Y["⚙️ POST /admin/update-thresholds<br/>Modify AI + Band thresholds"]
+    
+    Z["🎯 5-Stage Pipeline Data"] --> AA["📊 Stage Classification<br/>Stage1_RuleBased: Keywords + Regex<br/>Stage2_LGBM: LightGBM ML<br/>Stage3_Detoxify: Toxicity<br/>Stage4_FinBert: Sentiment<br/>Stage5_LLM: Chain-of-Thought"]
+    
+    AA --> H
+    
+    style B fill:#e3f2fd
+    style D fill:#f3e5f5
+    style H fill:#fff3e0
+    style I fill:#e8f5e8
+    style N fill:#fff8e1
+    style S fill:#f1f8e9
+    style T fill:#fce4ec
+    style AA fill:#e1f5fe
+            </div>
+        </div>
+
+        <!-- Diagram 5: Advanced AI Models -->
+        <div class="diagram-container">
+            <h2 class="diagram-title">🤖 AI Models with 5-Stage Pipeline Processing<span class="new-feature">ADVANCED</span></h2>
+            <div class="diagram-description">
+                <strong>Sophisticated AI processing</strong> featuring the new 5-stage pipeline with Stage1_RuleBased, Stage2_LGBM, Stage3_Detoxify, Stage4_FinBert, and Stage5_LLM. Includes intelligent action determination and fallback logic.
+            </div>
+            <div class="mermaid">
+graph TD
+    A["🧠 Enhanced AI Models Pipeline"] --> B["🤖 Model Initialization"]
+    
+    B --> C["🔴 Stage1_RuleBased<br/>Keywords + Regex<br/>2736 Keywords"]
+    B --> D["🤖 Stage2_LGBM<br/>LightGBM Model<br/>lgbm_moderation.txt"]
+    B --> E["🧪 Stage3_Detoxify<br/>unitary/toxic-bert<br/>Toxicity Detection"]
+    B --> F["💰 Stage4_FinBert<br/>ProsusAI/finbert<br/>Financial Sentiment"]
+    B --> G["🧠 Stage5_LLM<br/>Groq LLM<br/>Chain-of-Thought"]
+    
+    C --> H["📥 Load Keywords File"]
+    H --> I["🔍 Fuzzy Keyword Matching"]
+    I --> J["✅ Rule-Based Ready<br/>2736 Keywords Loaded"]
+    
+    D --> K["📥 Load LightGBM Model"]
+    K --> L["🧠 Feature Extraction"]
+    L --> M["✅ LGBM Ready<br/>3-Class Classification"]
+    
+    E --> N["📥 Load Transformer Model"]
+    N --> O["⚙️ Set Device to CPU"]
+    O --> P["✅ Detoxify Ready<br/>Threshold: 0.5"]
+    
+    F --> Q["📥 Load Financial Model"]
+    Q --> R["⚙️ Set Device to CPU"] 
+    R --> S["✅ FinBERT Ready<br/>Sentiment Analysis Active"]
+    
+    G --> T["📥 Initialize Groq Client"]
+    T --> U["⚙️ Set API Key & Timeout"]
+    U --> V["✅ LLM Ready<br/>Chain-of-Thought Active"]
+    
+    W["📝 Input Text"] --> X["🔴 Stage1_RuleBased: Keyword Check"]
+    
+    X --> Y["🔍 Pattern Matching"]
+    Y --> Z{"🎯 Rule Violations?"}
+    
+    Z -->|Yes| AA["❌ BLOCK DETECTED<br/>band='BLOCK'<br/>action='BLOCK'<br/>threat_level='high'"]
+    Z -->|No| BB["✅ CONTINUE TO Stage2_LGBM"]
+    
+    BB --> CC["🤖 Stage2_LGBM: ML Classification"]
+    CC --> DD["🧠 Feature Extraction"]
+    DD --> EE["📊 ML Prediction<br/>0=PASS, 1=FLAG, 2=BLOCK"]
+    EE --> FF{"🎚️ Prediction Class"}
+    
+    FF -->|2 (BLOCK)| GG["❌ BLOCK DETECTED<br/>band='BLOCK'<br/>action='BLOCK'<br/>threat_level='high'"]
+    FF -->|1 (FLAG)| HH["⚠️ FLAG DETECTED<br/>band='WARNING'<br/>action='FLAG_MEDIUM'<br/>threat_level='medium'"]
+    FF -->|0 (PASS)| II["✅ CONTINUE TO Stage3_Detoxify"]
+    
+    II --> JJ["🧪 Stage3_Detoxify: Toxicity Check"]
+    JJ --> KK["🧠 Toxicity Classification"]
+    KK --> LL["📊 Get Toxicity Score (0-1)"]
+    LL --> MM{"🎚️ Score > 0.5?"}
+    
+    MM -->|Yes| NN["❌ TOXIC DETECTED<br/>band='BLOCK'<br/>action='BLOCK'<br/>threat_level='medium/high'"]
+    MM -->|No| OO["✅ CONTINUE TO Stage4_FinBert"]
+    
+    OO --> PP["💰 Stage4_FinBert: Sentiment Analysis"]
+    PP --> QQ["📈 Financial Sentiment Analysis"]
+    QQ --> RR["📊 Get Sentiment + Confidence"]
+    RR --> SS{"📉 Negative Sentiment?"}
+    
+    SS -->|No| TT["🟢 POSITIVE/NEUTRAL<br/>band='SAFE'<br/>action='PASS'<br/>threat_level='low'"]
+    SS -->|Yes| UU["⚠️ NEGATIVE SENTIMENT<br/>band='WARNING'<br/>action='FLAG_MEDIUM'<br/>threat_level='low'"]
+    
+    VV["🧠 Stage5_LLM: Chain-of-Thought"]
+    VV --> WW["📝 Generate Prompt"]
+    WW --> XX["🧠 LLM Analysis"]
+    XX --> YY["📊 Get Decision<br/>FRAUD/CLEAN/UNCERTAIN"]
+    YY --> ZZ{"🎯 LLM Result"}
+    
+    ZZ -->|FRAUD| AAA["❌ FRAUD DETECTED<br/>band='BLOCK'<br/>action='BLOCK'<br/>threat_level='high'"]
+    ZZ -->|CLEAN| BBB["✅ CLEAN CONTENT<br/>band='SAFE'<br/>action='PASS'<br/>threat_level='low'"]
+    ZZ -->|UNCERTAIN| CCC["⚠️ UNCERTAIN<br/>band='WARNING'<br/>action='BLOCK'<br/>threat_level='medium'"]
+    
+    DDD["⚠️ Enhanced Error Handling"] --> EEE["🔧 Graceful Model Failures"]
+    EEE --> FFF["🔄 Smart Fallbacks<br/>- Log detailed warnings<br/>- Continue pipeline<br/>- Return safe defaults<br/>- Maintain 5-stage system"]
+    
+    GGG["🎛️ Advanced Configuration"] --> HHH["🎚️ Enhanced Thresholds<br/>- Toxicity: 0.5<br/>- LGBM: 3-class classification<br/>- Groq Timeout: 30s<br/>🎯 Stage Configuration<br/>- Stage1_RuleBased: Keywords + Regex<br/>- Stage2_LGBM: LightGBM ML<br/>- Stage3_Detoxify: Toxicity<br/>- Stage4_FinBert: Sentiment<br/>- Stage5_LLM: Chain-of-Thought"]
+    
+    HHH --> MM
+    HHH --> ZZ
+    
+    style C fill:#ffebee
+    style D fill:#e8f5e8
+    style E fill:#fff8e1
+    style F fill:#e1f5fe
+    style G fill:#f3e5f5
+    style J fill:#c8e6c9
+    style M fill:#c8e6c9
+    style P fill:#c8e6c9
+    style S fill:#c8e6c9
+    style V fill:#c8e6c9
+    style AA fill:#ffcdd2
+    style GG fill:#ffcdd2
+    style NN fill:#ffcdd2
+    style AAA fill:#ffcdd2
+    style CCC fill:#ffcdd2
+    style TT fill:#c8e6c9
+    style BBB fill:#c8e6c9
+    style HH fill:#fff3cd
+    style UU fill:#fff3cd
+    style EEE fill:#fff3e0
+    style FFF fill:#fff3e0
+            </div>
+        </div>
+
+        <!-- Diagram 6: Enhanced Architecture -->
+        <div class="diagram-container">
+            <h2 class="diagram-title">🏗️ Complete 5-Stage System Architecture<span class="new-feature">UPGRADED</span></h2>
+            <div class="diagram-description">
+                <strong>Comprehensive system architecture</strong> showcasing the enhanced layered design with the new 5-stage pipeline, upgraded UI components, and extended database schema.
+            </div>
+            <div class="mermaid">
+graph TD
+    A["🌐 Frontend Layer<br/>Enhanced UI v2.1"] --> B["📤 User Interface<br/>- Content Input Form<br/>- Real-time Results<br/>- Band Badges<br/>- Confidence Bars<br/>- Action Status"]
+    
+    B --> C["🚀 API Gateway<br/>FastAPI Server"]
+    C --> D["🛡️ Moderation Engine<br/>5-Stage Pipeline"]
+    
+    D --> E["📋 Stage1_RuleBased<br/>Enhanced Rule-Based<br/>- 2736 keywords matching<br/>- Advanced regex patterns<br/>- Enhanced threat detection<br/>- Direct BLOCK classification"]
+    D --> F["🤖 Stage2_LGBM<br/>LightGBM ML Model<br/>- Feature extraction<br/>- 3-class classification<br/>- Confidence scoring<br/>- ML-based decisions"]
+    D --> G["🧪 Stage3_Detoxify<br/>Toxicity Detection<br/>- Toxicity classification<br/>- unitary/toxic-bert<br/>- Threshold: 0.5<br/>- BLOCK on detection"]
+    D --> H["💰 Stage4_FinBert<br/>Financial Sentiment<br/>- Financial sentiment analysis<br/>- ProsusAI/finbert<br/>- Sentiment classification<br/>- Confidence-based decisions"]
+    D --> I["🧠 Stage5_LLM<br/>Chain-of-Thought<br/>- Groq LLM integration<br/>- llama3-8b-8192<br/>- Chain-of-thought reasoning<br/>- Fallback logic"]
+    
+    J["🗄️ Data Layer<br/>PostgreSQL"] --> K["📊 Enhanced Database<br/>- Posts with band/action<br/>- Comprehensive metadata<br/>- Performance analytics<br/>- Audit trail"]
+    
+    L["🔧 Configuration Layer"] --> M["⚙️ System Config<br/>- Environment variables<br/>- Model thresholds<br/>- API keys<br/>- Timeout settings"]
+    
+    N["📈 Analytics Layer"] --> O["📊 Enhanced Statistics<br/>- Band breakdown<br/>- Action statistics<br/>- Stage performance<br/>- System health"]
+    
+    P["🛡️ Security Layer"] --> Q["🔒 Security Features<br/>- Input validation<br/>- SQL injection protection<br/>- CORS configuration<br/>- API key management"]
+    
+    R["🔄 Fallback Layer"] --> S["⚠️ Error Handling<br/>- Model failure recovery<br/>- Graceful degradation<br/>- Fallback decisions<br/>- System continuity"]
+    
+    T["📝 Input Processing"] --> U["🔍 Stage1_RuleBased Check"]
+    U --> V{"❓ Rule Violations?"}
+    V -->|Yes| W["❌ BLOCK Decision"]
+    V -->|No| X["🤖 Stage2_LGBM Classification"]
+    
+    X --> Y{"🧠 ML Prediction"}
+    Y -->|BLOCK| Z["❌ BLOCK Decision"]
+    Y -->|FLAG| AA["⚠️ ESCALATE Decision"]
+    Y -->|PASS| BB["🧪 Stage3_Detoxify Check"]
+    
+    BB --> CC{"☠️ Toxic Content?"}
+    CC -->|Yes| DD["❌ BLOCK Decision"]
+    CC -->|No| EE["💰 Stage4_FinBert Analysis"]
+    
+    EE --> FF{"📈 Sentiment Score"}
+    FF -->|Negative| GG["⚠️ ESCALATE Decision"]
+    FF -->|Positive/Neutral| HH["🧠 Stage5_LLM Analysis"]
+    
+    HH --> II{"📡 LLM Available?"}
+    II -->|No| JJ["⚠️ Fallback Logic"]
+    II -->|Yes| KK["🧠 LLM Decision"]
+    
+    KK --> LL{"🎯 LLM Result"}
+    LL -->|FRAUD| MM["❌ BLOCK Decision"]
+    LL -->|CLEAN| NN["✅ ACCEPT Decision"]
+    LL -->|UNCERTAIN| OO["❌ BLOCK Decision"]
+    
+    JJ --> PP{"🔍 Previous Escalations?"}
+    PP -->|Yes| QQ["❌ BLOCK Decision"]
+    PP -->|No| RR["✅ ACCEPT Decision"]
+    
+    W --> SS["💾 Database Storage"]
+    Z --> SS
+    DD --> SS
+    MM --> SS
+    OO --> SS
+    QQ --> SS
+    AA --> SS
+    GG --> SS
+    NN --> SS
+    RR --> SS
+    
+    SS --> TT["📊 Enhanced Response"]
+    TT --> UU["🔄 Frontend Update"]
+    
+    style A fill:#e1f5fe
+    style D fill:#fff3e0
+    style E fill:#ffebee
+    style F fill:#e8f5e8
+    style G fill:#fff8e1
+    style H fill:#e1f5fe
+    style I fill:#f3e5f5
+    style J fill:#f3e5f5
+    style L fill:#fff3e0
+    style N fill:#fff8e1
+    style P fill:#ffebee
+    style R fill:#fff3e0
+    style SS fill:#f3e5f5
+    style UU fill:#e8f5e8
+            </div>
+        </div>
+
+        <!-- Diagram 7: Complete Enhanced Data Flow -->
+        <div class="diagram-container">
+            <h2 class="diagram-title">📊 Complete Enhanced End-to-End Data Flow<span class="new-feature">COMPREHENSIVE</span></h2>
+            <div class="diagram-description">
+                <strong>Ultimate process visualization</strong> showing every step from user input to 5-stage classification, including the new pipeline system, confidence scoring, action determination, and enhanced visual feedback.
+            </div>
+            <div class="mermaid">
+flowchart TD
+    Start([👤 User starts enhanced moderation]) --> Input["📝 Enter content in enhanced form<br/>(index.html v2.1)"]
+    
+    Input --> Validate{"🔍 Enhanced Validation<br/>Content not empty?"}
+    Validate -->|No| Error1["❌ Show enhanced error"]
+    Validate -->|Yes| Submit["📤 Submit enhanced POST /moderate"]
+    
+    Submit --> Server["⚡ FastAPI v2.1 receives request<br/>(main.py)"]
+    Server --> InitEngine["🛡️ Initialize Enhanced Engine v2.1"]
+    
+    InitEngine --> LoadKeywords["📚 Load 2736 keywords from<br/>data/external/words.json"]
+    LoadKeywords --> LoadModels["🤖 Load enhanced AI models<br/>LightGBM + Detoxify + FinBERT + LLM"]
+    
+    LoadModels --> Stage1["📋 STAGE 1: Stage1_RuleBased"]
+    Stage1 --> CheckKeywords["🔍 Enhanced keyword matching<br/>Fuzzy matching + case insensitive"]
+    CheckKeywords --> CheckRegex["🎯 Advanced regex patterns<br/>URLs, crypto addresses, threats"]
+    
+    CheckRegex --> Rule1{"❓ Rule violations detected?"}
+    Rule1 -->|Yes| Reject1["❌ IMMEDIATE BLOCK<br/>Band: BLOCK<br/>Action: BLOCK<br/>Threat: High<br/>Confidence: 0.9"]
+    Rule1 -->|No| Stage2["🤖 STAGE 2: Stage2_LGBM"]
+    
+    Stage2 --> LGBM["🧠 Process with LightGBM model<br/>lgbm_moderation.txt"]
+    LGBM --> MLScore["📊 Get ML prediction (0/1/2)"]
+    MLScore --> ML1{"🎚️ Prediction class?"}
+    
+    ML1 -->|2 (BLOCK)| Reject2["❌ LGBM BLOCK<br/>Band: BLOCK<br/>Action: BLOCK<br/>Threat: High<br/>Confidence: Score"]
+    ML1 -->|1 (FLAG)| Flag1["⚠️ LGBM FLAG<br/>Band: WARNING<br/>Action: FLAG_MEDIUM<br/>Threat: Medium<br/>Confidence: Score"]
+    ML1 -->|0 (PASS)| Stage3["🧪 STAGE 3: Stage3_Detoxify"]
+    
+    Stage3 --> Detoxify["🧠 Process with enhanced toxic-bert"]
+    Detoxify --> ToxicScore["📊 Get toxicity score (0-1)"]
+    ToxicScore --> Toxic1{"🎚️ Score > 0.5 threshold?"}
+    
+    Toxic1 -->|Yes| Reject3["❌ TOXICITY BLOCK<br/>Band: BLOCK<br/>Action: BLOCK<br/>Threat: Medium/High<br/>Confidence: Score"]
+    Toxic1 -->|No| Stage4["💰 STAGE 4: Stage4_FinBert"]
+    
+    Stage4 --> FinBERT["📈 Process with enhanced FinBERT"]
+    FinBERT --> FinSentiment["📊 Get financial sentiment + confidence"]
+    FinSentiment --> SentimentCheck{"📉 Negative sentiment?"}
+    
+    SentimentCheck -->|No| Stage5["🧠 STAGE 5: Stage5_LLM"]
+    SentimentCheck -->|Yes| Flag2["⚠️ NEGATIVE SENTIMENT<br/>Band: WARNING<br/>Action: FLAG_MEDIUM<br/>Threat: Low<br/>Confidence: Score"]
+    
+    Stage5 --> LLM["🧠 Process with Groq LLM<br/>llama3-8b-8192"]
+    LLM --> LLMCheck{"📡 LLM API Available?"}
+    LLMCheck -->|No| Fallback["⚠️ FALLBACK LOGIC<br/>Check previous escalations"]
+    LLMCheck -->|Yes| LLMAnalysis["📝 Chain-of-thought analysis"]
+    
+    LLMAnalysis --> LLMResult["📊 Get LLM decision<br/>FRAUD/CLEAN/UNCERTAIN"]
+    LLMResult --> LLM1{"🎯 LLM Result?"}
+    
+    LLM1 -->|FRAUD| Reject4["❌ LLM FRAUD BLOCK<br/>Band: BLOCK<br/>Action: BLOCK<br/>Threat: High<br/>Confidence: 0.9"]
+    LLM1 -->|CLEAN| Accept1["✅ LLM CLEAN<br/>Band: SAFE<br/>Action: PASS<br/>Threat: Low<br/>Confidence: 0.9"]
+    LLM1 -->|UNCERTAIN| Reject5["❌ LLM UNCERTAIN BLOCK<br/>Band: WARNING<br/>Action: BLOCK<br/>Threat: Medium<br/>Confidence: 0.5"]
+    
+    Fallback --> FallbackCheck{"🔍 Previous escalations?"}
+    FallbackCheck -->|Yes| Reject6["❌ FALLBACK BLOCK<br/>Band: WARNING<br/>Action: BLOCK<br/>Threat: Medium<br/>Confidence: 0.7"]
+    FallbackCheck -->|No| Accept2["✅ FALLBACK ACCEPT<br/>Band: SAFE<br/>Action: PASS<br/>Threat: Low<br/>Confidence: 0.6"]
+    
+    Reject1 --> SaveDB["💾 Save to enhanced database<br/>with band + action columns"]
+    Reject2 --> SaveDB
+    Reject3 --> SaveDB
+    Reject4 --> SaveDB
+    Reject5 --> SaveDB
+    Reject6 --> SaveDB
+    Flag1 --> SaveDB
+    Flag2 --> SaveDB
+    Accept1 --> SaveDB
+    Accept2 --> SaveDB
+    
+    SaveDB --> CreatePost["🏗️ Create enhanced Post record<br/>with band/action metadata"]
+    CreatePost --> GetID["🆔 Get assigned post ID"]
+    GetID --> Response["📊 Create enhanced ModerationResponse<br/>JSON with band/action/confidence"]
+    
+    Response --> Frontend["🌐 Send to enhanced frontend"]
+    Frontend --> DisplayResult["📺 Display enhanced result<br/>Band badges + confidence bars"]
+    DisplayResult --> UpdateTable["🔄 Refresh enhanced posts table<br/>GET /posts with bands"]
+    
+    UpdateTable --> ShowStats["📈 Update enhanced statistics<br/>GET /stats with band analytics"]
+    ShowStats --> VisualFeedback["🎨 Show visual feedback<br/>Color-coded bands + actions"]
+    VisualFeedback --> End([✅ Enhanced process complete])
+    
+    Error1 --> End
+    
+    style Input fill:#e1f5fe
+    style Stage1 fill:#ffebee
+    style Stage2 fill:#e8f5e8
+    style Stage3 fill:#fff8e1
+    style Stage4 fill:#e1f5fe
+    style Stage5 fill:#f3e5f5
+    style Reject1 fill:#ffcdd2
+    style Reject2 fill:#ffcdd2
+    style Reject3 fill:#ffcdd2
+    style Reject4 fill:#ffcdd2
+    style Reject5 fill:#ffcdd2
+    style Reject6 fill:#ffcdd2
+    style Flag1 fill:#fff3cd
+    style Flag2 fill:#fff3cd
+    style Accept1 fill:#c8e6c9
+    style Accept2 fill:#c8e6c9
+    style SaveDB fill:#e3f2fd
+    style DisplayResult fill:#f1f8e9
+    style VisualFeedback fill:#e8f5e8
+            </div>
+        </div>
+    </div>
+
+    <button class="back-to-top" onclick="scrollToTop()">⬆️</button>
+
+    <script>
+        // Initialize Mermaid with enhanced settings
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            },
+            sequence: {
+                diagramMarginX: 50,
+                diagramMarginY: 10,
+                actorMargin: 50,
+                width: 150,
+                height: 65,
+                boxMargin: 10,
+                boxTextMargin: 5,
+                noteMargin: 10,
+                messageMargin: 35
+            }
+        });
+
+        // Enhanced back to top functionality
+        window.addEventListener('scroll', function() {
+            const backToTop = document.querySelector('.back-to-top');
+            if (window.pageYOffset > 300) {
+                backToTop.style.display = 'block';
+                backToTop.style.opacity = '1';
+            } else {
+                backToTop.style.display = 'none';
+                backToTop.style.opacity = '0';
+            }
+        });
+
+        function scrollToTop() {
+            window.scrollTo({ 
+                top: 0, 
+                behavior: 'smooth' 
+            });
+        }
+
+        // Enhanced console logging
+        console.log('🎉 Enhanced Content Moderation Engine v2.0 - All Diagrams Loaded!');
+        console.log('📊 7 enhanced diagrams with 5-layer band system');
+        console.log('🎯 Features: Band classification, action mapping, confidence visualization');
+        console.log('🔄 Scroll to view all enhanced diagrams');
+        
+        // Add smooth scroll behavior for better UX
+        document.documentElement.style.scrollBehavior = 'smooth';
+    </script>
+</body>
+</html> 
