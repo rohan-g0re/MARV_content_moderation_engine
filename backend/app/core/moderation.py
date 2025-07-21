@@ -23,6 +23,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from dotenv import load_dotenv
 import joblib
+import time
 
 # Load environment variables from backend/.env
 backend_dir = Path(__file__).parent.parent.parent
@@ -82,7 +83,7 @@ class ModerationResult:
 
 class ModerationStage(ABC):
     @abstractmethod
-    def process(self, text: str, context: Dict[str, Any] = None) -> ModerationResult:
+    def process(self, text: str, context: Optional[Dict[str, Any]] = None) -> ModerationResult:
         pass
 
     @property
@@ -135,8 +136,9 @@ class Stage1_RuleBased(ModerationStage):
         urls = re.findall(url_pattern, text)
         return len(urls) > 0
 
-    def process(self, text: str, context: Dict[str, Any] = None) -> ModerationResult:
-        context = context or {}
+    def process(self, text: str, context: Optional[Dict[str, Any]] = None) -> ModerationResult:
+        if context is None:
+            context = {}
         for keyword in self.scam_lexicon:
             if self._fuzzy_match(text, keyword):
                 logger.info(f"Stage1: Blocked for keyword: {keyword}")
@@ -201,8 +203,9 @@ class Stage2_LGBM(ModerationStage):
     def stage_name(self):
         return "Stage2_LGBM"
 
-    def process(self, text: str, context: Dict[str, Any] = None) -> ModerationResult:
-        context = context or {}
+    def process(self, text: str, context: Optional[Dict[str, Any]] = None) -> ModerationResult:
+        if context is None:
+            context = {}
         if self.model is None:
             print("[LGBM] Model not loaded.")
             return ModerationResult("ACCEPT", self.stage_name, "lgbm_model_unavailable", 0.5, "low")
@@ -245,8 +248,9 @@ class Stage3_Detoxify(ModerationStage):
             logger.warning(f"Detoxify model loading failed: {e}")
             self.detoxify_classifier = None
 
-    def process(self, text: str, context: Dict[str, Any] = None) -> ModerationResult:
-        context = context or {}
+    def process(self, text: str, context: Optional[Dict[str, Any]] = None) -> ModerationResult:
+        if context is None:
+            context = {}
         if self.detoxify_classifier is None:
             logger.warning("Detoxify model not available, skipping stage 2")
             return ModerationResult(
@@ -305,8 +309,9 @@ class Stage4_FinBert(ModerationStage):
             logger.warning(f"FinBERT model loading failed: {e}")
             self.finbert_classifier = None
 
-    def process(self, text: str, context: Dict[str, Any] = None) -> ModerationResult:
-        context = context or {}
+    def process(self, text: str, context: Optional[Dict[str, Any]] = None) -> ModerationResult:
+        if context is None:
+            context = {}
         if self.finbert_classifier is None:
             logger.warning("FinBERT model not available, skipping stage 3a")
             return ModerationResult(
@@ -420,8 +425,9 @@ Instructions:
             logger.error(f"LLM escalation error: {e}")
             return "ERROR", 0.5
 
-    def process(self, text: str, context: Dict[str, Any] = None) -> ModerationResult:
-        context = context or {}
+    def process(self, text: str, context: Optional[Dict[str, Any]] = None) -> ModerationResult:
+        if context is None:
+            context = {}
         llm_suggestion = None
         if context and "llm_suggestion" in context:
             llm_suggestion = context["llm_suggestion"]
@@ -505,23 +511,46 @@ class ModerationPipeline:
 
     def process(self, text: str) -> ModerationResult:
         context = {}
+        stage_times = {}
         for stage in self.stages:
+            t0 = time.perf_counter()
             result = stage.process(text, context)
+            t1 = time.perf_counter()
+            elapsed = t1 - t0
+            # Map stage name to DB column
+            if stage.stage_name.lower().startswith("stage1"):
+                stage_times["rulebased_time"] = elapsed
+            elif stage.stage_name.lower().startswith("stage2"):
+                stage_times["lgbm_time"] = elapsed
+            elif stage.stage_name.lower().startswith("stage3_detoxify"):
+                stage_times["detoxify_time"] = elapsed
+            elif stage.stage_name.lower().startswith("stage4"):
+                stage_times["finbert_time"] = elapsed
+            elif stage.stage_name.lower().startswith("stage5"):
+                stage_times["llm_time"] = elapsed
             self.stage_results[stage.stage_name] = result
             if result.decision == "BLOCK":
-                logger.info(f"Content blocked at {stage.stage_name}: {result.reason}")
+                # Attach timing info to result
+                for k, v in stage_times.items():
+                    setattr(result, k, v)
                 return result
             context[stage.stage_name] = result
         for stage in reversed(self.stages):
             if stage.stage_name in self.stage_results:
-                return self.stage_results[stage.stage_name]
-        return ModerationResult(
+                result = self.stage_results[stage.stage_name]
+                for k, v in stage_times.items():
+                    setattr(result, k, v)
+                return result
+        result = ModerationResult(
             decision="ACCEPT",
             stage="pipeline",
             reason="all_stages_passed",
             confidence=1.0,
             threat_level="low"
         )
+        for k, v in stage_times.items():
+            setattr(result, k, v)
+        return result
 
     def get_stage_results(self) -> Dict[str, ModerationResult]:
         return self.stage_results.copy()

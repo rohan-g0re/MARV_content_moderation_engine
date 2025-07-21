@@ -268,6 +268,11 @@ class Post(Base):
     action = Column(String, default="PASS")
     created_at = Column(DateTime, default=func.now())
     processing_time = Column(String, default="0.0")
+    rulebased_time = Column(String, default="0.0")
+    lgbm_time = Column(String, default="0.0")
+    detoxify_time = Column(String, default="0.0")
+    finbert_time = Column(String, default="0.0")
+    llm_time = Column(String, default="0.0")
     override = Column(String, default="No")
     llm_explanation = Column(Text, default="")
     llm_troublesome_words = Column(Text, default="")
@@ -466,6 +471,11 @@ def moderate_post(request: ModerationRequest):
             band=result.band,
             action=result.action,
             processing_time=str(processing_time),
+            rulebased_time=str(getattr(result, 'rulebased_time', 0.0)),
+            lgbm_time=str(getattr(result, 'lgbm_time', 0.0)),
+            detoxify_time=str(getattr(result, 'detoxify_time', 0.0)),
+            finbert_time=str(getattr(result, 'finbert_time', 0.0)),
+            llm_time=str(getattr(result, 'llm_time', 0.0)),
             llm_explanation=llm_explanation,
             llm_troublesome_words=_json.dumps(llm_troublesome_words),
             llm_suggestion=llm_suggestion,
