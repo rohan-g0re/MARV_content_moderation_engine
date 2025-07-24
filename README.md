@@ -96,6 +96,7 @@ graph TD
     style JJ fill:#e8f5e8
 ```
 
+
 ### 🎯 Multi-Stage Decision System
 
 | Stage | Purpose | Models Used | Fallback Strategy |
@@ -202,6 +203,190 @@ python content_analyzer.py     # Bulk content analysis from Excel/CSV files
 | **Frontend** | HTML5 + JavaScript | User interface | N/A |
 
 ---
+## 🔍 Scam Detection Pipeline - Step-by-Step Example LGBM
+
+This section demonstrates how the scam detection pipeline processes a text post from raw input to final prediction using a trained LightGBM model.
+
+---
+
+### ✅ Pipeline Overview
+
+The pipeline performs the following steps:
+
+1. **Input**: Accepts a text post.
+2. **Feature Extraction**:
+
+   * Text statistics (e.g., punctuation, capital letters)
+   * Scammy phrases and regex pattern flags
+   * TF-IDF values (bigrams)
+3. **Prediction**: Uses a trained LightGBM model to classify the post into:
+
+   * `PASS` (0) – Clean content
+   * `FLAG` (1) – Suspicious content
+   * `BLOCK` (2) – Scammy/malicious content
+
+---
+
+### 🧠 Example Input
+
+```python
+text = "DM me for a guaranteed 200% return on your crypto investment! Limited spots only!"
+```
+
+---
+
+### 1️⃣ Load Model & Vectorizer
+
+```python
+import joblib
+from features import extract_features
+
+# Load TF-IDF vectorizer and keywords used in training
+keywords, feature_names, tfidf_vec = joblib.load("backend/app/core/lgbm_support.pkl")
+```
+
+---
+
+### 2️⃣ Extract Features
+
+```python
+features = extract_features(text, keywords, tfidf_vec)
+X_input = pd.DataFrame([features])
+```
+
+Example extracted features:
+
+| Feature                     | Value |
+| --------------------------- | ----- |
+| num\_words                  | 13    |
+| num\_exclaims               | 1     |
+| phrase\_guaranteed\_returns | 1     |
+| regex\_match\_0             | 1     |
+| regex\_match\_1             | 1     |
+| keyword\_present            | 1     |
+| tfidf\_guaranteed\_return   | 0.18  |
+| ...                         | ...   |
+
+---
+
+### 3️⃣ Predict with LightGBM
+
+```python
+import lightgbm as lgb
+booster = lgb.Booster(model_file="backend/app/core/lgbm_moderation.txt")
+
+prediction = booster.predict(X_input.values)
+predicted_class = int(np.argmax(prediction))
+```
+
+---
+
+### 4️⃣ Map to Label
+
+```python
+label_map_rev = {0: "PASS", 1: "FLAG", 2: "BLOCK"}
+print(label_map_rev[predicted_class])  # Output: BLOCK
+```
+
+---
+
+### 🧾 Final Output
+
+| Input Text                              | Prediction |
+| --------------------------------------- | ---------- |
+| "DM me for a guaranteed 200% return..." | BLOCK      |
+
+---
+
+### 🛠️ Optional Utility Function
+
+```python
+def predict_label(text, booster, keywords, tfidf_vec):
+    feats = extract_features(text, keywords, tfidf_vec)
+    X_input = pd.DataFrame([feats])
+    pred_probs = booster.predict(X_input.values)
+    label_idx = int(np.argmax(pred_probs))
+    label_map_rev = {0: "PASS", 1: "FLAG", 2: "BLOCK"}
+    return label_map_rev[label_idx], pred_probs[0]
+
+# Usage:
+label, probs = predict_label(text, booster, keywords, tfidf_vec)
+print(label)  # BLOCK
+print(probs)  # [0.02, 0.11, 0.87]
+```
+
+---
+
+### 🔁 Training Your Own LightGBM Model
+
+If you'd like to train the model from scratch on your own dataset, follow these steps:
+
+1. **Prepare Data**:
+
+   * Format your data as a CSV file with at least two columns: `text` and `label`.
+   * Valid labels are: `PASS`, `FLAG`, and `BLOCK`.
+
+2. **Configure Paths and Parameters**:
+
+   * Set the path to your data file:
+
+     ```python
+     DATA_FILE = "your_data.csv"
+     ```
+   * Update other config variables if needed (e.g., `MODEL_OUT`, `SEED`, `N_SPLITS`).
+
+3. **Run the Training Script**:
+
+   * Execute the LightGBM training script (same as the one provided in the repo).
+   * It performs:
+
+     * TF-IDF vectorization
+     * Feature extraction via `extract_features()`
+     * Hyperparameter tuning via `RandomizedSearchCV`
+     * Model evaluation and saving
+
+4. **Artifacts Generated**:
+
+   * `lgbm_moderation.txt`: trained LightGBM model (Booster format)
+   * `lgbm_support.pkl`: keywords, feature names, and fitted TF-IDF vectorizer
+
+5. **Inference Ready**:
+
+   * Use the above saved files with the `predict_label()` function to classify new text posts.
+
+---
+
+### 🧪 Generating Synthetic Training Data
+
+To generate synthetic training samples using an LLM (e.g., LLaMA-3 via Groq), follow these steps:
+
+1. **Set Environment**:
+
+   * Ensure your `.env` file contains `GROQ_API_KEY=<your_key>`
+
+2. **Run the Script**:
+
+   * Use the synthetic data generator script `generate_synthetic_data.py`
+   * This script will:
+
+     * Prompt the LLM to create user posts for each label (`PASS`, `FLAG`, `BLOCK`)
+     * Paraphrase a subset of those posts
+     * Add small noise to simulate real-world variations
+     * Deduplicate and save the final dataset to `synthetic_moderation_data.csv`
+
+3. **Generated Output**:
+
+   * The final file will contain two columns: `text` and `label`
+   * You can directly plug this into the LightGBM training pipeline
+
+4. **Tunable Parameters** (inside the script):
+
+   * `NUM_PASS`, `NUM_FLAG`, `NUM_BLOCK`: how many samples to generate per class
+   * `PARAPHRASE_PROB`, `NOISE_PROB`: how much variation to introduce
+   * `N_PER_BATCH`: how many posts to request per LLM prompt
+
+---
+
 
 ## 🛡️ Fallback Logic & Error Handling
 
