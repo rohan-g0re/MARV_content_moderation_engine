@@ -244,7 +244,6 @@ data/processed/*
 data/external/*
 !data/external/.gitkeep
 *.csv
-*.json
 *.parquet
 models/saved/
 checkpoints/
