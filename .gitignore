@@ -120,7 +120,6 @@ content_moderation_env/
 .dmypy.json
 dmypy.json
 
-# Pyre type checker
 .pyre/
 
 # React / Node.js
